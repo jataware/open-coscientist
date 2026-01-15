@@ -270,7 +270,7 @@ async def check_mcp_available(server_url: Optional[str] = None) -> bool:
             logger.warning("MCP server responded but provided no tools")
             return False
 
-    except Exception as e:
+    except Exception:
         logger.warning(f"MCP server unavailable at {server_url}")
         return False
 

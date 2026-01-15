@@ -9,7 +9,7 @@ import json
 import sys
 import time
 import warnings
-from typing import Any, AsyncIterator, Callable, Coroutine, Dict, Optional, Tuple
+from typing import Any, AsyncIterator, Coroutine, Dict, Optional, Tuple
 
 from rich.console import Console
 from rich.panel import Panel

@@ -104,7 +104,7 @@ async def judge_matchup(
         )
         logger.debug(f"hypothesis A reflection: {reflection_notes_a[:200]}...")
     else:
-        logger.debug(f"hypothesis A: missing reflection notes")
+        logger.debug("hypothesis A: missing reflection notes")
 
     if reflection_notes_b:
         # extract classification from notes
@@ -118,7 +118,7 @@ async def judge_matchup(
         )
         logger.debug(f"hypothesis B reflection: {reflection_notes_b[:200]}...")
     else:
-        logger.debug(f"hypothesis B: missing reflection notes")
+        logger.debug("hypothesis B: missing reflection notes")
 
     prompt, schema = get_ranking_prompt(
         research_goal=research_goal,
@@ -133,9 +133,9 @@ async def judge_matchup(
 
     if reflection_notes_a or reflection_notes_b:
         if "Reflection Notes" in prompt:
-            logger.debug(f"prompt includes 'Reflection Notes' section")
+            logger.debug("prompt includes 'Reflection Notes' section")
         else:
-            logger.debug(f"warning: Reflection notes provided but not found in prompt")
+            logger.debug("warning: Reflection notes provided but not found in prompt")
 
     # Use semaphore to limit concurrent calls (avoid rate limits)
     async with _ranking_semaphore:
@@ -180,18 +180,18 @@ async def ranking_node(state: WorkflowState) -> Dict[str, Any]:
     logger.info(f"Starting ranking tournament with {len(hypotheses)} hypotheses")
 
     hypotheses_with_reflection = sum(1 for h in hypotheses if h.reflection_notes)
-    logger.debug(f"\n=== ranking tournament debug ===")
+    logger.debug("\n=== ranking tournament debug ===")
     logger.debug(f"total hypotheses: {len(hypotheses)}")
     logger.debug(
         f"hypotheses with reflection notes: {hypotheses_with_reflection}/{len(hypotheses)}"
     )
 
     if hypotheses_with_reflection == 0:
-        logger.debug(f"warning: No hypotheses have reflection notes!")
+        logger.debug("warning: No hypotheses have reflection notes!")
     elif hypotheses_with_reflection < len(hypotheses):
-        logger.debug(f"warning: Some hypotheses missing reflection notes")
+        logger.debug("warning: Some hypotheses missing reflection notes")
     else:
-        logger.debug(f"all hypotheses have reflection notes")
+        logger.debug("all hypotheses have reflection notes")
 
     if len(hypotheses) < 2:
         logger.warning("Need at least 2 hypotheses for tournament")

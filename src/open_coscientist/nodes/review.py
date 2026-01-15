@@ -6,7 +6,6 @@ Review node - adaptive peer review strategy based on hypothesis count.
 """
 
 import asyncio
-import json
 import logging
 from typing import Any, Dict, List
 

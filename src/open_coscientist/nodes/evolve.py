@@ -76,7 +76,7 @@ async def evolve_single_hypothesis(
     """
     # Log meta review usage with colorful output
     logger.debug("\n=== evolve single hypothesis ===")
-    logger.debug(f"using meta review for evolution")
+    logger.debug("using meta review for evolution")
 
     # Display meta review details
     common_strengths = meta_review.get("common_strengths", [])

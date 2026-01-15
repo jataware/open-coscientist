@@ -440,7 +440,7 @@ async def call_llm_json(
                             error_path = ".".join(str(p) for p in e.path) if e.path else "root"
                             validation_feedback = f"\n\n--- VALIDATION ERROR FROM PREVIOUS ATTEMPT ---\nError: {e.message}\nLocation: {error_path}\nPlease ensure your JSON output strictly matches the required schema structure.\n---"
                             prompt = original_prompt + validation_feedback
-                            logger.debug(f"added validation feedback to retry prompt")
+                            logger.debug("added validation feedback to retry prompt")
 
                         # Retry on validation failure
                         continue
@@ -487,7 +487,7 @@ async def call_llm_json(
                                 validation_feedback = f"\n\n--- VALIDATION ERROR FROM PREVIOUS ATTEMPT ---\nError: {e.message}\nLocation: {error_path}\nPlease ensure your JSON output strictly matches the required schema structure.\n---"
                                 prompt = original_prompt + validation_feedback
                                 logger.debug(
-                                    f"added validation feedback to retry prompt after repair"
+                                    "added validation feedback to retry prompt after repair"
                                 )
 
                             # Retry on validation failure
@@ -528,7 +528,7 @@ async def call_llm_json(
     # No fallback available - raise appropriate error
     if last_response_text:
         # Log the full response for debugging
-        logger.error(f"Failed to parse JSON response after all repair attempts.")
+        logger.error("Failed to parse JSON response after all repair attempts.")
         logger.error(f"Response length: {len(last_response_text)} chars")
         logger.error(f"First 500 chars: {last_response_text[:500]}")
         logger.error(f"Last 500 chars: {last_response_text[-500:]}")
@@ -693,7 +693,7 @@ async def call_llm_with_tools(
 
                 # Validate response before caching
                 if not final_content.strip():
-                    logger.error(f"LLM returned empty final response in tool call loop")
+                    logger.error("LLM returned empty final response in tool call loop")
                     raise ValueError(f"LLM returned empty final response. Model: {model_name}")
 
                 logger.debug(f"llm finished after {iteration + 1} iterations")

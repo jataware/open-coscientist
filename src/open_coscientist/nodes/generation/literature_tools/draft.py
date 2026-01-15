@@ -6,14 +6,12 @@ papers using tools and drafts initial hypothesis ideas based on identified gaps.
 """
 
 import hashlib
-import json
 import logging
 import os
 from typing import Any, Dict, List
 
 from ....constants import (
     EXTENDED_MAX_TOKENS,
-    GENERATE_LIT_TOOL_MAX_PAPERS,
     HIGH_TEMPERATURE,
     get_draft_max_iterations,
 )
@@ -194,9 +192,9 @@ async def draft_hypotheses(
     response_data, was_repaired = attempt_json_repair(response_text, allow_major_repairs=True)
 
     if response_data is None:
-        logger.error(f"Failed to parse draft JSON response after all repair attempts")
+        logger.error("Failed to parse draft JSON response after all repair attempts")
         logger.error(f"Response: {final_response[:500]}...")
-        raise ValueError(f"Draft phase returned invalid JSON that could not be repaired")
+        raise ValueError("Draft phase returned invalid JSON that could not be repaired")
 
     if was_repaired:
         logger.warning("Draft JSON response required major repairs (possible truncation)")

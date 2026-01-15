@@ -12,8 +12,7 @@ import hashlib
 import json
 import logging
 import os
-import re
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from ..constants import (
     DEFAULT_MAX_TOKENS,
@@ -345,7 +344,7 @@ async def literature_review_node(state: WorkflowState) -> Dict[str, Any]:
     }
 
     if not papers_with_fulltext:
-        logger.error(f"No papers have fulltext content - cannot perform analysis")
+        logger.error("No papers have fulltext content - cannot perform analysis")
         logger.info("Creating article objects from metadata (abstracts available)")
         synthesis = LITERATURE_REVIEW_FAILED
 

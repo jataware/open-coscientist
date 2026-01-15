@@ -12,7 +12,6 @@ import logging
 from typing import Any, Dict, List
 
 from ....constants import (
-    DEFAULT_MAX_TOKENS,
     EXTENDED_MAX_TOKENS,
     GENERATE_LIT_TOOL_MAX_PAPERS,
     HIGH_TEMPERATURE,
