@@ -200,6 +200,9 @@ class WorkflowState(TypedDict):
     articles: Optional[List[Article]]
     """Individual articles extracted from literature review (for hypothesis comparison)."""
 
+    generation_corpus_slug: Optional[str]
+    """Shared corpus slug for reuse across draft and validation phases."""
+
     debate_transcripts: Optional[List[Dict[str, Any]]]
     """Internal debate transcripts from parallel debates. Each entry: {debate_id, transcript, hypothesis_text}"""
 
