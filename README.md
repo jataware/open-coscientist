@@ -6,9 +6,18 @@ Open Coscientist is an open-source **adaptation based on Google Research's [AI C
 
 ## Demo
 
-[![Demo](https://github.com/jataware/coscientist-lg/blob/open-source-rename-legal/assets/Open_Coscientist_Demo.gif?raw=true)](https://youtu.be/LyOvigZ59yE?si=JiIJnXajgLhTb1yj)
+<p align="center">
+  <a href="https://youtu.be/LyOvigZ59yE?si=JiIJnXajgLhTb1yj">
+    <img src="https://github.com/jataware/coscientist-lg/blob/open-source-rename-legal/assets/Open_Coscientist_Demo.gif?raw=true" alt="Open Coscientist Demo">
+  </a>
+</p>
 
-_Click to watch full demo on YouTube_
+<p align="center">
+  <em>
+    In this demo we use Open Coscientist to generate hypotheses for novel approaches to early detection of Alzheimer's disease.
+    Click to watch the full demo on YouTube.
+  </em>
+</p>
 
 ### Standalone operation
 
