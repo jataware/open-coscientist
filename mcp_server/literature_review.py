@@ -2,7 +2,6 @@ from Bio import Entrez
 from time import sleep
 import os
 import logging
-import pickle
 from pathlib import Path
 from typing import cast
 import traceback

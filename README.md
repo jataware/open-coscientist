@@ -2,7 +2,7 @@
 
 **AI-powered research hypothesis generation using LangGraph**
 
-Open Coscientist is an open-source **adaptation based on Google Research's AI Co-Scientist** research paper. This project provides an open implementation that generates, reviews, ranks, and evolves research hypotheses using the multi-agent architecture described. It orchestrates 8-10 specialized AI agents through a LangGraph workflow and aims to produce novel hypotheses grounded in scientific literature.
+Open Coscientist is an open-source **adaptation based on Google Research's [AI Co-Scientist](https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/)** research paper. This project provides an open implementation that generates, reviews, ranks, and evolves research hypotheses using the multi-agent architecture described. It orchestrates 8-10 specialized AI agents through a LangGraph workflow and aims to produce novel hypotheses grounded in scientific literature.
 
 ## Demo
 
@@ -30,6 +30,9 @@ export GEMINI_API_KEY="your-key-here"
 # or: export ANTHROPIC_API_KEY="your-key-here"
 # or: export OPENAI_API_KEY="your-key-here"
 ```
+
+For the default literature review step to run, setup the included [Mcp Server](./mcp_server).
+Else no published research will be used.
 
 **Model Support**: Uses [LiteLLM](https://docs.litellm.ai/docs/providers) for 100+ LLM providers (OpenAI, Anthropic, Google, Azure, AWS Bedrock, Cohere, etc.). May need to tweak some constants.py token usage and other params, such as initial hypotheses count, in order to work with less powerful models.
 

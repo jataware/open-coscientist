@@ -51,5 +51,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    # wrap with run_console for graceful shutdown on KeyboardInterrupt or internal warnings
+    # wrap with run_console for graceful shutdown on KeyboardInterrupt and hide internal warnings
     run_console(main())
