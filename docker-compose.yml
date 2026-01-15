@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: mcp_server/Dockerfile
+    ports:
+      - "8888:8888"
+    env_file:
+      - mcp_server/.env
+    environment:
+      # override or set additional environment variables
+      - COSCIENTIST_MCP_PORT=8888
+    volumes:
+      # persist paper cache
+      - ./mcp_server/paper_cache:/app/mcp_server/paper_cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8888/health', timeout=5.0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

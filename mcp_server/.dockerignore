@@ -1,0 +1,42 @@
+# python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.eggs
+
+# environment
+.env
+.venv
+venv/
+ENV/
+
+# testing
+.pytest_cache
+.coverage
+htmlcov/
+
+# ide
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# git
+.git
+.gitignore
+
+# documentation
+*.md
+!README.md
+
+# misc
+.DS_Store
+unused/

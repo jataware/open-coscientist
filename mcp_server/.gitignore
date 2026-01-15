@@ -1,0 +1,27 @@
+# environment variables
+.env
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# caching
+.cache/
+*.pkl
+
+# pixi
+.pixi/
+
+# ide
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# os
+.DS_Store
+Thumbs.db
