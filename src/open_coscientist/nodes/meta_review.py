@@ -41,10 +41,13 @@ async def meta_review_node(state: WorkflowState) -> Dict[str, Any]:
 
     # Emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("meta_review_start", {
-            "message": "Synthesizing insights from all reviews...",
-            "progress": PROGRESS_META_REVIEW_START
-        })
+        await state["progress_callback"](
+            "meta_review_start",
+            {
+                "message": "Synthesizing insights from all reviews...",
+                "progress": PROGRESS_META_REVIEW_START,
+            },
+        )
 
     # Collect all reviews
     all_reviews = []
@@ -63,7 +66,7 @@ async def meta_review_node(state: WorkflowState) -> Dict[str, Any]:
             "scores": latest_review.scores,
             "constructive_feedback": latest_review.constructive_feedback,
             "elo_rating": hyp.elo_rating,
-            "win_loss_record": f"{hyp.win_count}W-{hyp.loss_count}L"
+            "win_loss_record": f"{hyp.win_count}W-{hyp.loss_count}L",
         }
         all_reviews.append(review_data)
 
@@ -74,7 +77,7 @@ async def meta_review_node(state: WorkflowState) -> Dict[str, Any]:
                 "summary": "No reviews available",
                 "common_strengths": [],
                 "common_weaknesses": [],
-                "strategic_recommendations": []
+                "strategic_recommendations": [],
             }
         }
 
@@ -89,7 +92,7 @@ async def meta_review_node(state: WorkflowState) -> Dict[str, Any]:
         research_goal=state["research_goal"],
         all_reviews=reviews_text,
         supervisor_guidance=supervisor_guidance,
-        instructions=None, # for the future
+        instructions=None,  # for the future
     )
 
     response = await call_llm_json(
@@ -108,7 +111,7 @@ async def meta_review_node(state: WorkflowState) -> Dict[str, Any]:
         "strategic_recommendations": response.get("strategic_recommendations", []),
         "diversity_assessment": response.get("diversity_assessment", ""),
         "top_performers_analysis": response.get("top_performers_analysis", ""),
-        "areas_for_improvement": response.get("areas_for_improvement", [])
+        "areas_for_improvement": response.get("areas_for_improvement", []),
     }
 
     logger.info("Meta-review complete")
@@ -117,17 +120,18 @@ async def meta_review_node(state: WorkflowState) -> Dict[str, Any]:
 
     # Emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("meta_review_complete", {
-            "message": "Meta-review synthesis complete",
-            "progress": PROGRESS_META_REVIEW_COMPLETE,
-            "strengths_count": len(meta_review['common_strengths']),
-            "recommendations_count": len(meta_review['strategic_recommendations'])
-        })
+        await state["progress_callback"](
+            "meta_review_complete",
+            {
+                "message": "Meta-review synthesis complete",
+                "progress": PROGRESS_META_REVIEW_COMPLETE,
+                "strengths_count": len(meta_review["common_strengths"]),
+                "recommendations_count": len(meta_review["strategic_recommendations"]),
+            },
+        )
 
     # Update metrics (deltas only, merge_metrics will add to existing state)
-    metrics = create_metrics_update(
-        llm_calls_delta=1
-    )
+    metrics = create_metrics_update(llm_calls_delta=1)
 
     return {
         "meta_review": meta_review,
@@ -138,8 +142,8 @@ async def meta_review_node(state: WorkflowState) -> Dict[str, Any]:
                 "content": "Synthesized meta-review from all hypotheses",
                 "metadata": {
                     "phase": "meta_review",
-                    "themes": len(meta_review.get('emerging_themes', []))
-                }
+                    "themes": len(meta_review.get("emerging_themes", [])),
+                },
             }
-        ]
+        ],
     }

@@ -49,7 +49,7 @@ async def _run_single_debate(
     transcript = ""
 
     for turn in range(1, num_turns + 1):
-        is_final = (turn == num_turns)
+        is_final = turn == num_turns
 
         prompt, schema = get_debate_generation_prompt(
             research_goal=state["research_goal"],
@@ -58,7 +58,7 @@ async def _run_single_debate(
             supervisor_guidance=supervisor_guidance,
             preferences=preferences,
             attributes=attributes,
-            is_final_turn=is_final
+            is_final_turn=is_final,
         )
 
         if is_final:
@@ -108,8 +108,7 @@ async def _run_single_debate(
 
 
 async def generate_with_debate(
-    state: WorkflowState,
-    count: int
+    state: WorkflowState, count: int
 ) -> Tuple[List[Hypothesis], List[Dict[str, Any]]]:
     """
     generate hypotheses using parallel debate strategy

@@ -52,10 +52,13 @@ async def supervisor_node(state: WorkflowState) -> Dict[str, Any]:
 
     # emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("supervisor_start", {
-            "message": "Analyzing research goal and creating plan...",
-            "progress": PROGRESS_SUPERVISOR_START
-        })
+        await state["progress_callback"](
+            "supervisor_start",
+            {
+                "message": "Analyzing research goal and creating plan...",
+                "progress": PROGRESS_SUPERVISOR_START,
+            },
+        )
 
     # call llm to create research plan with all context
     prompt, schema = get_supervisor_prompt(
@@ -85,7 +88,7 @@ async def supervisor_node(state: WorkflowState) -> Dict[str, Any]:
         "workflow_plan": response.get("workflow_plan", {}),
         "performance_assessment": response.get("performance_assessment", {}),
         "adjustment_recommendations": response.get("adjustment_recommendations", []),
-        "output_preparation": response.get("output_preparation", {})
+        "output_preparation": response.get("output_preparation", {}),
     }
 
     logger.info("Supervisor plan created")
@@ -98,16 +101,17 @@ async def supervisor_node(state: WorkflowState) -> Dict[str, Any]:
 
     # Emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("supervisor_complete", {
-            "message": "Research plan created",
-            "progress": PROGRESS_SUPERVISOR_COMPLETE,
-            "key_areas": len(key_areas)
-        })
+        await state["progress_callback"](
+            "supervisor_complete",
+            {
+                "message": "Research plan created",
+                "progress": PROGRESS_SUPERVISOR_COMPLETE,
+                "key_areas": len(key_areas),
+            },
+        )
 
     # Update metrics (deltas only, merge_metrics will add to existing state)
-    metrics = create_metrics_update(
-        llm_calls_delta=1
-    )
+    metrics = create_metrics_update(llm_calls_delta=1)
 
     return {
         "supervisor_guidance": supervisor_guidance,
@@ -116,10 +120,7 @@ async def supervisor_node(state: WorkflowState) -> Dict[str, Any]:
             {
                 "role": "assistant",
                 "content": "Created research plan and workflow guidance",
-                "metadata": {
-                    "phase": "supervisor",
-                    "key_areas": len(key_areas)
-                }
+                "metadata": {"phase": "supervisor", "key_areas": len(key_areas)},
             }
-        ]
+        ],
     }

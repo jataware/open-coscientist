@@ -31,7 +31,7 @@ async def review_single_hypothesis(
     research_goal: str,
     model_name: str,
     supervisor_guidance: Dict[str, Any] | None = None,
-    meta_review: Dict[str, Any] | None = None
+    meta_review: Dict[str, Any] | None = None,
 ) -> HypothesisReview:
     """
     Review a single hypothesis.
@@ -50,7 +50,7 @@ async def review_single_hypothesis(
         research_goal=research_goal,
         hypothesis_text=hypothesis_text,
         supervisor_guidance=supervisor_guidance,
-        meta_review=meta_review
+        meta_review=meta_review,
     )
 
     response = await call_llm_json(
@@ -83,7 +83,7 @@ async def review_parallel_individual(
     research_goal: str,
     model_name: str,
     supervisor_guidance: Dict[str, Any] | None = None,
-    meta_review: Dict[str, Any] | None = None
+    meta_review: Dict[str, Any] | None = None,
 ) -> List[HypothesisReview]:
     """
     Review hypotheses in parallel (original approach).
@@ -105,7 +105,7 @@ async def review_parallel_individual(
             research_goal=research_goal,
             model_name=model_name,
             supervisor_guidance=supervisor_guidance,
-            meta_review=meta_review
+            meta_review=meta_review,
         )
         for hyp in hypotheses
     ]
@@ -118,7 +118,7 @@ async def review_comparative_batch(
     research_goal: str,
     model_name: str,
     supervisor_guidance: Dict[str, Any] | None = None,
-    meta_review: Dict[str, Any] | None = None
+    meta_review: Dict[str, Any] | None = None,
 ) -> List[HypothesisReview]:
     """
     Review hypotheses in a single comparative batch.
@@ -145,7 +145,7 @@ async def review_comparative_batch(
         research_goal=research_goal,
         hypotheses_list=hypotheses_list,
         supervisor_guidance=supervisor_guidance,
-        meta_review=meta_review
+        meta_review=meta_review,
     )
 
     # scale max_tokens based on hypothesis count in batch
@@ -153,7 +153,7 @@ async def review_comparative_batch(
     hypothesis_count = len(hypotheses)
     scaled_max_tokens = min(
         THINKING_MAX_TOKENS + (max(0, hypothesis_count - 5) * 1500),
-        24000  # reasonable upper limit for batch review
+        24000,  # reasonable upper limit for batch review
     )
 
     response = await call_llm_json(
@@ -170,7 +170,9 @@ async def review_comparative_batch(
 
     # debug logging
     logger.debug(f"batch review response keys: {list(response.keys())}")
-    logger.debug(f"reviews_data type: {type(reviews_data)}, length: {len(reviews_data) if isinstance(reviews_data, list) else 'N/A'}")
+    logger.debug(
+        f"reviews_data type: {type(reviews_data)}, length: {len(reviews_data) if isinstance(reviews_data, list) else 'N/A'}"
+    )
 
     if len(reviews_data) != len(hypotheses):
         logger.warning(f"Expected {len(hypotheses)} reviews but got {len(reviews_data)}")
@@ -200,14 +202,16 @@ async def review_comparative_batch(
         else:
             # missing review - create empty one
             logger.error(f"No review data for hypothesis {i}")
-            reviews.append(HypothesisReview(
-                review_summary="Review unavailable",
-                scores={},
-                safety_ethical_concerns="",
-                detailed_feedback={},
-                constructive_feedback="",
-                overall_score=0.0,
-            ))
+            reviews.append(
+                HypothesisReview(
+                    review_summary="Review unavailable",
+                    scores={},
+                    safety_ethical_concerns="",
+                    detailed_feedback={},
+                    constructive_feedback="",
+                    overall_score=0.0,
+                )
+            )
 
     return reviews
 
@@ -237,23 +241,30 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
     use_comparative = num_hypotheses <= COMPARATIVE_BATCH_THRESHOLD
 
     if use_comparative:
-        logger.info(f"Reviewing {num_hypotheses} hypotheses via comparative batch (≤{COMPARATIVE_BATCH_THRESHOLD})")
+        logger.info(
+            f"Reviewing {num_hypotheses} hypotheses via comparative batch (≤{COMPARATIVE_BATCH_THRESHOLD})"
+        )
         strategy_name = "comparative batch"
     else:
-        logger.info(f"Reviewing {num_hypotheses} hypotheses via parallel individual (>{COMPARATIVE_BATCH_THRESHOLD})")
+        logger.info(
+            f"Reviewing {num_hypotheses} hypotheses via parallel individual (>{COMPARATIVE_BATCH_THRESHOLD})"
+        )
         strategy_name = "parallel"
 
     # Emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("review_start", {
-            "message": f"Reviewing {num_hypotheses} hypotheses...",
-            "progress": PROGRESS_REVIEW_START
-        })
+        await state["progress_callback"](
+            "review_start",
+            {
+                "message": f"Reviewing {num_hypotheses} hypotheses...",
+                "progress": PROGRESS_REVIEW_START,
+            },
+        )
 
     # Get supervisor guidance and meta_review from state
     supervisor_guidance = state.get("supervisor_guidance")
     meta_review = state.get("meta_review")
-    
+
     # Execute chosen strategy
     if use_comparative:
         reviews = await review_comparative_batch(
@@ -261,7 +272,7 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
             research_goal=state["research_goal"],
             model_name=state["model_name"],
             supervisor_guidance=supervisor_guidance,
-            meta_review=meta_review
+            meta_review=meta_review,
         )
         llm_calls = 1  # Single batch call
     else:
@@ -270,7 +281,7 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
             research_goal=state["research_goal"],
             model_name=state["model_name"],
             supervisor_guidance=supervisor_guidance,
-            meta_review=meta_review
+            meta_review=meta_review,
         )
         llm_calls = num_hypotheses  # One call per hypothesis
 
@@ -290,18 +301,20 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
 
     # Emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("review_complete", {
-            "message": f"Completed {len(reviews)} reviews",
-            "progress": PROGRESS_REVIEW_COMPLETE,
-            "reviews_count": len(reviews)
-        })
+        await state["progress_callback"](
+            "review_complete",
+            {
+                "message": f"Completed {len(reviews)} reviews",
+                "progress": PROGRESS_REVIEW_COMPLETE,
+                "reviews_count": len(reviews),
+            },
+        )
 
     # Update metrics (deltas only, merge_metrics will add to existing state)
-    metrics = create_metrics_update(
-        reviews_count_delta=len(reviews),
-        llm_calls_delta=llm_calls
+    metrics = create_metrics_update(reviews_count_delta=len(reviews), llm_calls_delta=llm_calls)
+    logger.debug(
+        f"review node creating metrics delta: reviews={len(reviews)}, llm_calls={llm_calls}"
     )
-    logger.debug(f"review node creating metrics delta: reviews={len(reviews)}, llm_calls={llm_calls}")
 
     return {
         "hypotheses": hypotheses,
@@ -310,7 +323,7 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
             {
                 "role": "assistant",
                 "content": f"Reviewed {len(reviews)} hypotheses ({strategy_name})",
-                "metadata": {"phase": "review", "strategy": strategy_name}
+                "metadata": {"phase": "review", "strategy": strategy_name},
             }
-        ]
+        ],
     }

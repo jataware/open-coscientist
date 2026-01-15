@@ -32,11 +32,7 @@ class PythonToolRegistry:
         self._schemas: Dict[str, Dict[str, Any]] = {}
         self._openai_tools: List[Dict[str, Any]] = []
 
-    def register(
-        self,
-        name: Optional[str] = None,
-        description: Optional[str] = None
-    ) -> Callable:
+    def register(self, name: Optional[str] = None, description: Optional[str] = None) -> Callable:
         """
         Decorator to register a Python function as a tool
 
@@ -47,6 +43,7 @@ class PythonToolRegistry:
         returns:
             decorator function
         """
+
         def decorator(func: Callable) -> Callable:
             tool_name = name or func.__name__
             tool_description = description or func.__doc__ or f"call {tool_name}"
@@ -59,10 +56,7 @@ class PythonToolRegistry:
             self._schemas[tool_name] = schema
 
             # convert to OpenAI format
-            openai_tool = {
-                "type": "function",
-                "function": schema
-            }
+            openai_tool = {"type": "function", "function": schema}
             self._openai_tools.append(openai_tool)
 
             logger.debug(f"registered Python tool: {tool_name}")
@@ -71,12 +65,7 @@ class PythonToolRegistry:
 
         return decorator
 
-    def _generate_schema(
-        self,
-        func: Callable,
-        name: str,
-        description: str
-    ) -> Dict[str, Any]:
+    def _generate_schema(self, func: Callable, name: str, description: str) -> Dict[str, Any]:
         """
         Generate JSON schema from function signature and type hints
 
@@ -91,11 +80,7 @@ class PythonToolRegistry:
         sig = inspect.signature(func)
         type_hints = get_type_hints(func)
 
-        parameters = {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
+        parameters = {"type": "object", "properties": {}, "required": []}
 
         for param_name, param in sig.parameters.items():
             # get type hint
@@ -111,19 +96,11 @@ class PythonToolRegistry:
             if param.default == inspect.Parameter.empty:
                 parameters["required"].append(param_name)
 
-        schema = {
-            "name": name,
-            "description": description,
-            "parameters": parameters
-        }
+        schema = {"name": name, "description": description, "parameters": parameters}
 
         return schema
 
-    def _type_to_schema(
-        self,
-        python_type: Any,
-        param_name: str
-    ) -> Dict[str, Any]:
+    def _type_to_schema(self, python_type: Any, param_name: str) -> Dict[str, Any]:
         """
         Convert Python type hint to JSON schema
 
@@ -147,9 +124,7 @@ class PythonToolRegistry:
                 # Optional[T] case - recurse on T
                 return self._type_to_schema(non_none_types[0], param_name)
             else:
-                logger.warning(
-                    f"complex Union type for {param_name}, using string"
-                )
+                logger.warning(f"complex Union type for {param_name}, using string")
                 return {"type": "string"}
 
         # handle List[T]
@@ -157,22 +132,13 @@ class PythonToolRegistry:
             args = get_args(python_type)
             if args:
                 item_schema = self._type_to_schema(args[0], f"{param_name}_item")
-                return {
-                    "type": "array",
-                    "items": item_schema
-                }
+                return {"type": "array", "items": item_schema}
             else:
-                return {
-                    "type": "array",
-                    "items": {"type": "string"}
-                }
+                return {"type": "array", "items": {"type": "string"}}
 
         # handle Dict[K, V]
         if origin is dict:
-            return {
-                "type": "object",
-                "additionalProperties": True
-            }
+            return {"type": "object", "additionalProperties": True}
 
         # handle basic types
         if python_type == str:
@@ -187,9 +153,7 @@ class PythonToolRegistry:
             return {"type": "string"}
         else:
             # default to string for unknown types
-            logger.debug(
-                f"unknown type {python_type} for {param_name}, using string"
-            )
+            logger.debug(f"unknown type {python_type} for {param_name}, using string")
             return {"type": "string"}
 
     def get_function(self, name: str) -> Optional[Callable]:
@@ -212,7 +176,9 @@ class PythonToolRegistry:
         """get tools in OpenAI format for LiteLLM"""
         return self._openai_tools.copy()
 
-    def get_tools(self, whitelist: Optional[List[str]] = None) -> tuple[Dict[str, Callable], List[Dict[str, Any]]]:
+    def get_tools(
+        self, whitelist: Optional[List[str]] = None
+    ) -> tuple[Dict[str, Callable], List[Dict[str, Any]]]:
         """
         Get tools filtered by whitelist
 
@@ -227,16 +193,12 @@ class PythonToolRegistry:
 
         # filter functions
         filtered_functions = {
-            name: func
-            for name, func in self._functions.items()
-            if name in whitelist
+            name: func for name, func in self._functions.items() if name in whitelist
         }
 
         # filter openai tools
         filtered_openai_tools = [
-            tool
-            for tool in self._openai_tools
-            if tool["function"]["name"] in whitelist
+            tool for tool in self._openai_tools if tool["function"]["name"] in whitelist
         ]
 
         return filtered_functions, filtered_openai_tools

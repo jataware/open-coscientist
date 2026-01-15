@@ -123,7 +123,7 @@ def create_metrics_update(
     evolutions_count_delta: int = 0,
     llm_calls_delta: int = 0,
     total_time: Optional[float] = None,
-    phase_times: Optional[Dict[str, float]] = None
+    phase_times: Optional[Dict[str, float]] = None,
 ) -> ExecutionMetrics:
     """
     create new ExecutionMetrics with ONLY the deltas (not cumulative).
@@ -150,7 +150,7 @@ def create_metrics_update(
         evolutions_count=evolutions_count_delta,
         llm_calls=llm_calls_delta,
         total_time=total_time if total_time is not None else 0.0,
-        phase_times=phase_times if phase_times is not None else {}
+        phase_times=phase_times if phase_times is not None else {},
     )
 
 

@@ -55,34 +55,38 @@ async def generate_with_tools(
     articles = state.get("articles", [])
     if articles:
         used_count = sum(1 for art in articles if art.used_in_analysis)
-        logger.debug(f"state.articles contains {len(articles)} total articles, {used_count} with used_in_analysis=True")
+        logger.debug(
+            f"state.articles contains {len(articles)} total articles, {used_count} with used_in_analysis=True"
+        )
         if used_count > 0:
-            articles_with_pdfs = sum(1 for art in articles if art.used_in_analysis and art.pdf_links)
-            logger.info(f"Including {used_count} analyzed articles in prompt ({articles_with_pdfs} with PDFs, {used_count - articles_with_pdfs} abstract-only)")
+            articles_with_pdfs = sum(
+                1 for art in articles if art.used_in_analysis and art.pdf_links
+            )
+            logger.info(
+                f"Including {used_count} analyzed articles in prompt ({articles_with_pdfs} with PDFs, {used_count - articles_with_pdfs} abstract-only)"
+            )
         else:
-            logger.warning("No articles with used_in_analysis=True found in state - agent will search fresh")
+            logger.warning(
+                "No articles with used_in_analysis=True found in state - agent will search fresh"
+            )
 
     # Phase 1: Draft hypotheses (reads pre-curated papers)
-    draft_hyps = await draft_hypotheses(
-        state=state,
-        count=count,
-        mcp_client=mcp_client
-    )
+    draft_hyps = await draft_hypotheses(state=state, count=count, mcp_client=mcp_client)
 
     logger.info(f"Phase 1 complete: drafted {len(draft_hyps)} hypotheses")
 
     # Phase 2: Validate and refine drafts (searches for novelty)
     hypotheses = await validate_hypotheses(
-        state=state,
-        draft_hypotheses=draft_hyps,
-        mcp_client=mcp_client
+        state=state, draft_hypotheses=draft_hyps, mcp_client=mcp_client
     )
 
     logger.info(f"Phase 2 complete: validated {len(hypotheses)} hypotheses")
 
     # debug logging to verify generation_method
     for i, hyp in enumerate(hypotheses):
-        logger.debug(f"tool-generated hypothesis {i+1}: generation_method={hyp.generation_method}, text={hyp.text[:80]}...")
+        logger.debug(
+            f"tool-generated hypothesis {i+1}: generation_method={hyp.generation_method}, text={hyp.text[:80]}..."
+        )
 
     return hypotheses
 

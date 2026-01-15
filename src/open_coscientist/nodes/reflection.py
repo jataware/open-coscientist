@@ -54,11 +54,14 @@ async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
 
     # emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("reflection_start", {
-            "message": f"Analyzing {len(hypotheses)} hypotheses against literature...",
-            "progress": PROGRESS_REFLECTION_START,
-            "hypotheses_count": len(hypotheses)
-        })
+        await state["progress_callback"](
+            "reflection_start",
+            {
+                "message": f"Analyzing {len(hypotheses)} hypotheses against literature...",
+                "progress": PROGRESS_REFLECTION_START,
+                "hypotheses_count": len(hypotheses),
+            },
+        )
 
     # analyze each hypothesis
     for i, hypothesis in enumerate(hypotheses):
@@ -95,11 +98,14 @@ async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
 
     # emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("reflection_complete", {
-            "message": "Reflection analysis complete",
-            "progress": PROGRESS_REFLECTION_COMPLETE,
-            "hypotheses_count": len(hypotheses)
-        })
+        await state["progress_callback"](
+            "reflection_complete",
+            {
+                "message": "Reflection analysis complete",
+                "progress": PROGRESS_REFLECTION_COMPLETE,
+                "hypotheses_count": len(hypotheses),
+            },
+        )
 
     logger.info(f"Completed reflection analysis for {len(hypotheses)} hypotheses")
 
@@ -109,7 +115,7 @@ async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
             {
                 "role": "assistant",
                 "content": f"completed reflection analysis for {len(hypotheses)} hypotheses",
-                "metadata": {"phase": "reflection"}
+                "metadata": {"phase": "reflection"},
             }
-        ]
+        ],
     }

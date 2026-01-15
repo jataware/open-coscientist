@@ -23,7 +23,7 @@ async def generate_standard(
     supervisor_guidance: Dict[str, Any],
     preferences: Optional[str],
     attributes: Optional[List[str]],
-    user_hypotheses: Optional[List[str]]
+    user_hypotheses: Optional[List[str]],
 ) -> List[Hypothesis]:
     """
     generate hypotheses using standard generation (no literature review)

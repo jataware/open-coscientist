@@ -37,7 +37,7 @@ class HybridToolProvider:
     def __init__(
         self,
         mcp_client: Optional[MCPToolClient] = None,
-        python_registry: Optional[PythonToolRegistry] = None
+        python_registry: Optional[PythonToolRegistry] = None,
     ):
         """
         Initialize hybrid tool provider
@@ -55,7 +55,7 @@ class HybridToolProvider:
     def get_tools(
         self,
         mcp_whitelist: Optional[List[str]] = None,
-        python_whitelist: Optional[List[str]] = None
+        python_whitelist: Optional[List[str]] = None,
     ) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
         """
         Get merged tools from MCP and Python sources
@@ -211,14 +211,11 @@ class HybridToolProvider:
             "role": "tool",
             "name": tool_name,
             "tool_call_id": tool_call_id,
-            "content": result_json
+            "content": result_json,
         }
 
     def _create_error_response(
-        self,
-        tool_name: str,
-        tool_call_id: str,
-        error_msg: str
+        self, tool_name: str, tool_call_id: str, error_msg: str
     ) -> Dict[str, Any]:
         """
         Create error response message for failed tool call
@@ -235,5 +232,5 @@ class HybridToolProvider:
             "role": "tool",
             "name": tool_name,
             "tool_call_id": tool_call_id,
-            "content": json.dumps({"error": error_msg})
+            "content": json.dumps({"error": error_msg}),
         }

@@ -24,12 +24,12 @@ logger = logging.getLogger(__name__)
 # suppress Pydantic serialization warnings from LiteLLM globally
 # these occur when LiteLLM response objects (Pydantic models) are serialized
 # and have mismatched field counts between streaming/non-streaming responses
-warnings.filterwarnings(
-    'ignore',
-    message=r'.*Pydantic serializer warnings.*',
-    category=UserWarning
-)
-def attempt_json_repair(json_str: str, allow_major_repairs: bool = False) -> Tuple[Optional[Dict[str, Any]], bool]:
+warnings.filterwarnings("ignore", message=r".*Pydantic serializer warnings.*", category=UserWarning)
+
+
+def attempt_json_repair(
+    json_str: str, allow_major_repairs: bool = False
+) -> Tuple[Optional[Dict[str, Any]], bool]:
     """
     Attempt to repair common JSON syntax errors from LLM outputs.
 
@@ -57,8 +57,8 @@ def attempt_json_repair(json_str: str, allow_major_repairs: bool = False) -> Tup
     def close_truncated_json(s: str) -> str:
         """Try to close truncated JSON by adding missing braces/brackets."""
         # Count open vs closed braces and brackets
-        open_braces = s.count('{') - s.count('}')
-        open_brackets = s.count('[') - s.count(']')
+        open_braces = s.count("{") - s.count("}")
+        open_brackets = s.count("[") - s.count("]")
 
         # Enhanced unterminated string detection
         # Check if the string ends mid-value (unterminated string)
@@ -80,11 +80,11 @@ def attempt_json_repair(json_str: str, allow_major_repairs: bool = False) -> Tup
                 logger.debug("repaired: unterminated field name/string")
 
         # Pattern 3: Ends mid-array without closing (e.g., '"item1", "item2)
-        elif stripped.endswith(',') or (stripped[-1].isalnum() and '[' in stripped):
+        elif stripped.endswith(",") or (stripped[-1].isalnum() and "[" in stripped):
             # Likely truncated mid-array or mid-value
             # Try to close intelligently based on context
-            last_open_bracket = stripped.rfind('[')
-            last_close_bracket = stripped.rfind(']')
+            last_open_bracket = stripped.rfind("[")
+            last_close_bracket = stripped.rfind("]")
             if last_open_bracket > last_close_bracket:
                 # We're inside an unclosed array
                 # Check if we need to close a string first
@@ -95,11 +95,11 @@ def attempt_json_repair(json_str: str, allow_major_repairs: bool = False) -> Tup
                     logger.debug("repaired: unterminated string in array")
 
         # Remove trailing comma if present
-        s = re.sub(r',\s*$', '', s)
+        s = re.sub(r",\s*$", "", s)
 
         # Add missing closing characters
         # Close arrays first, then objects (proper nesting)
-        result = s + (']' * open_brackets) + ('}' * open_braces)
+        result = s + ("]" * open_brackets) + ("}" * open_braces)
 
         if open_braces > 0 or open_brackets > 0:
             logger.debug(f"repaired: added {open_brackets} ']' and {open_braces} '}}'")
@@ -109,7 +109,7 @@ def attempt_json_repair(json_str: str, allow_major_repairs: bool = False) -> Tup
     # Minor repairs (safe, don't indicate truncation)
     minor_repairs = [
         # Remove trailing commas before closing braces/brackets
-        lambda s: json.loads(re.sub(r',(\s*[}\]])', r'\1', s)),
+        lambda s: json.loads(re.sub(r",(\s*[}\]])", r"\1", s)),
     ]
 
     # Major repairs (indicate truncation/incomplete, only on final retry)
@@ -117,15 +117,19 @@ def attempt_json_repair(json_str: str, allow_major_repairs: bool = False) -> Tup
         # Close unterminated strings and truncated JSON (most common Gemini issue)
         lambda s: json.loads(close_truncated_json(s)),
         # Remove trailing commas AND close truncated JSON
-        lambda s: json.loads(close_truncated_json(re.sub(r',(\s*[}\]])', r'\1', s))),
+        lambda s: json.loads(close_truncated_json(re.sub(r",(\s*[}\]])", r"\1", s))),
         # Aggressively remove incomplete trailing content and close JSON
-        lambda s: json.loads(close_truncated_json(re.sub(r',?\s*"[^"]*$', '', s))),
+        lambda s: json.loads(close_truncated_json(re.sub(r',?\s*"[^"]*$', "", s))),
         # Remove incomplete field (key OR value) and close
-        lambda s: json.loads(close_truncated_json(re.sub(r'[:,]\s*"[^"]*$', '', s))),
+        lambda s: json.loads(close_truncated_json(re.sub(r'[:,]\s*"[^"]*$', "", s))),
         # Find last complete comma, truncate there, then close
-        lambda s: json.loads(close_truncated_json(s[:s.rfind(',')+1] if ',' in s else s)),
+        lambda s: json.loads(close_truncated_json(s[: s.rfind(",") + 1] if "," in s else s)),
         # Extract first complete JSON object using regex
-        lambda s: json.loads(re.search(r'\{.*\}', s, re.DOTALL).group(0)) if re.search(r'\{.*\}', s, re.DOTALL) else None,
+        lambda s: (
+            json.loads(re.search(r"\{.*\}", s, re.DOTALL).group(0))
+            if re.search(r"\{.*\}", s, re.DOTALL)
+            else None
+        ),
     ]
 
     # Try minor repairs first
@@ -145,7 +149,9 @@ def attempt_json_repair(json_str: str, allow_major_repairs: bool = False) -> Tup
             try:
                 result = repair_fn(json_str)
                 if result:
-                    logger.warning(f"JSON repaired using major repair strategy {i} (indicates truncation/incomplete response)")
+                    logger.warning(
+                        f"JSON repaired using major repair strategy {i} (indicates truncation/incomplete response)"
+                    )
                     return result, True
             except (json.JSONDecodeError, AttributeError, TypeError) as e:
                 if i < 2:  # Only log for first few strategies
@@ -207,7 +213,7 @@ def get_fallback_response(json_schema: Optional[Dict[str, Any]]) -> Optional[Dic
         return {
             "similarity_clusters": [],
             "diversity_assessment": "Analysis failed - skipping deduplication",
-            "redundancy_assessment": "Analysis failed - skipping deduplication"
+            "redundancy_assessment": "Analysis failed - skipping deduplication",
         }
 
     # Critical nodes - no fallback
@@ -275,7 +281,7 @@ async def call_llm(
             try:
                 completion_args["response_format"] = {
                     "type": "json_schema",
-                    "json_schema": json_schema
+                    "json_schema": json_schema,
                 }
             except Exception as e:
                 # Some models/providers don't support json_schema, fall back to json_object
@@ -302,9 +308,13 @@ async def call_llm(
 
         # Cache the response (only reached if content is valid)
         cache.set(
-            prompt, model_name, temperature, max_tokens,
+            prompt,
+            model_name,
+            temperature,
+            max_tokens,
             {"text": content},
-            json_schema=json_schema, force_json=force_json
+            json_schema=json_schema,
+            force_json=force_json,
         )
 
         return content
@@ -344,7 +354,9 @@ async def call_llm_json(
     """
     # Check cache first
     cache = get_cache()
-    cached_response = cache.get(prompt, model_name, temperature, max_tokens, json_schema=json_schema)
+    cached_response = cache.get(
+        prompt, model_name, temperature, max_tokens, json_schema=json_schema
+    )
     if cached_response is not None:
         logger.debug("using cached llm json response")
         return cached_response
@@ -355,7 +367,7 @@ async def call_llm_json(
     original_prompt = prompt  # save original for retries with feedback
 
     for attempt in range(1, max_attempts + 1):
-        is_final_attempt = (attempt == max_attempts)
+        is_final_attempt = attempt == max_attempts
 
         if attempt > 1:
             logger.debug(f"retrying llm call (attempt {attempt}/{max_attempts})")
@@ -368,13 +380,15 @@ async def call_llm_json(
                 max_tokens,
                 temperature,
                 force_json=True if not json_schema else False,
-                json_schema=json_schema
+                json_schema=json_schema,
             )
 
             # Check for None or empty response
             if not response_text:
                 logger.error("LLM returned None or empty response")
-                raise ValueError("LLM returned None or empty response. Check API keys, rate limits, and model availability.")
+                raise ValueError(
+                    "LLM returned None or empty response. Check API keys, rate limits, and model availability."
+                )
 
             # Try to extract JSON from markdown code blocks if present
             if "```json" in response_text:
@@ -406,15 +420,24 @@ async def call_llm_json(
                     try:
                         validate_json_schema(result, json_schema)
                         # Success! Cache and return
-                        cache.set(prompt, model_name, temperature, max_tokens, result, json_schema=json_schema)
+                        cache.set(
+                            prompt,
+                            model_name,
+                            temperature,
+                            max_tokens,
+                            result,
+                            json_schema=json_schema,
+                        )
                         return result
                     except ValidationError as e:
                         last_error = e
-                        logger.warning(f"Schema validation failed on attempt {attempt}: {e.message}")
+                        logger.warning(
+                            f"Schema validation failed on attempt {attempt}: {e.message}"
+                        )
 
                         # add validation feedback to prompt for next retry
                         if not is_final_attempt:
-                            error_path = '.'.join(str(p) for p in e.path) if e.path else "root"
+                            error_path = ".".join(str(p) for p in e.path) if e.path else "root"
                             validation_feedback = f"\n\n--- VALIDATION ERROR FROM PREVIOUS ATTEMPT ---\nError: {e.message}\nLocation: {error_path}\nPlease ensure your JSON output strictly matches the required schema structure.\n---"
                             prompt = original_prompt + validation_feedback
                             logger.debug(f"added validation feedback to retry prompt")
@@ -423,7 +446,9 @@ async def call_llm_json(
                         continue
                 else:
                     # No schema, parsing succeeded - we're done
-                    cache.set(prompt, model_name, temperature, max_tokens, result, json_schema=json_schema)
+                    cache.set(
+                        prompt, model_name, temperature, max_tokens, result, json_schema=json_schema
+                    )
                     return result
 
             # Step 3: Parsing failed, attempt repairs
@@ -441,24 +466,42 @@ async def call_llm_json(
                         try:
                             validate_json_schema(result, json_schema)
                             # Success! Cache and return
-                            cache.set(prompt, model_name, temperature, max_tokens, result, json_schema=json_schema)
+                            cache.set(
+                                prompt,
+                                model_name,
+                                temperature,
+                                max_tokens,
+                                result,
+                                json_schema=json_schema,
+                            )
                             return result
                         except ValidationError as e:
                             last_error = e
-                            logger.warning(f"Schema validation failed after repair on attempt {attempt}: {e.message}")
+                            logger.warning(
+                                f"Schema validation failed after repair on attempt {attempt}: {e.message}"
+                            )
 
                             # add validation feedback to prompt for next retry
                             if not is_final_attempt:
-                                error_path = '.'.join(str(p) for p in e.path) if e.path else "root"
+                                error_path = ".".join(str(p) for p in e.path) if e.path else "root"
                                 validation_feedback = f"\n\n--- VALIDATION ERROR FROM PREVIOUS ATTEMPT ---\nError: {e.message}\nLocation: {error_path}\nPlease ensure your JSON output strictly matches the required schema structure.\n---"
                                 prompt = original_prompt + validation_feedback
-                                logger.debug(f"added validation feedback to retry prompt after repair")
+                                logger.debug(
+                                    f"added validation feedback to retry prompt after repair"
+                                )
 
                             # Retry on validation failure
                             continue
                     else:
                         # No schema, repair succeeded - we're done
-                        cache.set(prompt, model_name, temperature, max_tokens, result, json_schema=json_schema)
+                        cache.set(
+                            prompt,
+                            model_name,
+                            temperature,
+                            max_tokens,
+                            result,
+                            json_schema=json_schema,
+                        )
                         return result
 
                 # If major repair was needed but we're not on final attempt, retry immediately
@@ -493,24 +536,28 @@ async def call_llm_json(
         # Log middle section too (where errors often are)
         if len(last_response_text) > 1000:
             mid_point = len(last_response_text) // 2
-            logger.error(f"Middle 500 chars (around char {mid_point}): {last_response_text[mid_point-250:mid_point+250]}")
+            logger.error(
+                f"Middle 500 chars (around char {mid_point}): {last_response_text[mid_point-250:mid_point+250]}"
+            )
 
         # Try to find where JSON is broken
         try:
             # Count braces
-            open_braces = last_response_text.count('{')
-            close_braces = last_response_text.count('}')
+            open_braces = last_response_text.count("{")
+            close_braces = last_response_text.count("}")
             logger.error(f"Brace count: {{ = {open_braces}, }} = {close_braces}")
 
             # Try to find first JSON error position
             for i in range(0, len(last_response_text), 100):
-                chunk = last_response_text[:i+100]
+                chunk = last_response_text[: i + 100]
                 try:
                     json.loads(chunk)
                 except json.JSONDecodeError as e:
                     if i > len(last_response_text) - 200:  # Near the end
                         logger.error(f"JSON error near position {e.pos}: {e.msg}")
-                        logger.error(f"Context around error: ...{last_response_text[max(0,e.pos-100):e.pos+100]}...")
+                        logger.error(
+                            f"Context around error: ...{last_response_text[max(0,e.pos-100):e.pos+100]}..."
+                        )
                         break
         except Exception as debug_err:
             logger.error(f"Error during debugging: {debug_err}")
@@ -522,19 +569,19 @@ async def call_llm_json(
             instance=last_error.instance,
             schema=last_error.schema,
             schema_path=last_error.schema_path,
-            path=last_error.path
+            path=last_error.path,
         )
     elif isinstance(last_error, json.JSONDecodeError):
         raise json.JSONDecodeError(
             f"Could not parse LLM response as JSON after {max_attempts} attempts",
             last_response_text or "",
-            last_error.pos if hasattr(last_error, 'pos') else 0
+            last_error.pos if hasattr(last_error, "pos") else 0,
         )
     else:
         raise json.JSONDecodeError(
             f"Could not parse LLM response as JSON after {max_attempts} attempts",
             last_response_text or "",
-            0
+            0,
         )
 
 
@@ -579,10 +626,7 @@ async def call_llm_with_tools(
 
     # Check cache first
     cache = get_cache()
-    cached_response = cache.get(
-        prompt, model_name, temperature, max_tokens,
-        tools=tools
-    )
+    cached_response = cache.get(prompt, model_name, temperature, max_tokens, tools=tools)
     if cached_response is not None:
         logger.debug("using cached llm tool call response")
         return cached_response["final_response"], cached_response["message_history"]
@@ -614,7 +658,7 @@ async def call_llm_with_tools(
             }
 
             # Add tool calls if present
-            if hasattr(message, 'tool_calls') and message.tool_calls:
+            if hasattr(message, "tool_calls") and message.tool_calls:
                 message_dict["tool_calls"] = [
                     {
                         "id": tc.id,
@@ -630,13 +674,13 @@ async def call_llm_with_tools(
             messages.append(message_dict)
 
             # Check if LLM wants to call tools
-            if hasattr(message, 'tool_calls') and message.tool_calls:
+            if hasattr(message, "tool_calls") and message.tool_calls:
                 logger.debug(f"llm requested {len(message.tool_calls)} tool calls")
 
                 # Execute all tool calls in parallel
-                tool_results = await asyncio.gather(*[
-                    tool_executor(tc) for tc in message.tool_calls
-                ])
+                tool_results = await asyncio.gather(
+                    *[tool_executor(tc) for tc in message.tool_calls]
+                )
 
                 # Add tool results to message history
                 messages.extend(tool_results)
@@ -656,9 +700,12 @@ async def call_llm_with_tools(
 
                 # Cache the successful result (only reached if content is valid)
                 cache.set(
-                    prompt, model_name, temperature, max_tokens,
+                    prompt,
+                    model_name,
+                    temperature,
+                    max_tokens,
                     {"final_response": final_content, "message_history": messages},
-                    tools=tools
+                    tools=tools,
                 )
 
                 return final_content, messages

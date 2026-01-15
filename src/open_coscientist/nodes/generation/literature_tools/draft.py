@@ -27,9 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 async def draft_hypotheses(
-    state: WorkflowState,
-    count: int,
-    mcp_client: Any
+    state: WorkflowState, count: int, mcp_client: Any
 ) -> List[Dict[str, str]]:
     """
     phase 1: draft hypotheses by searching pubmed for metadata
@@ -68,29 +66,27 @@ async def draft_hypotheses(
     # log lit review context
     if articles_with_reasoning:
         logger.info("Including lit review summary as context for drafting")
-        logger.info(f"Warm start: corpus already populated with {len(articles)} papers from literature review")
+        logger.info(
+            f"Warm start: corpus already populated with {len(articles)} papers from literature review"
+        )
     else:
         logger.warning("No lit review summary available - agent will examine papers directly")
 
     # initialize hybrid tool provider with draft-specific whitelist
-    provider = HybridToolProvider(
-        mcp_client=mcp_client,
-        python_registry=literature_tools
-    )
+    provider = HybridToolProvider(mcp_client=mcp_client, python_registry=literature_tools)
 
     # draft whitelist: pubmed metadata search only (no fulltext download)
     # validate phase will download fulltexts for novelty checking
-    mcp_whitelist = [
-        "search_pubmed"
-    ]
+    mcp_whitelist = ["search_pubmed"]
     python_whitelist = []
 
     tools_dict, openai_tools = provider.get_tools(
-        mcp_whitelist=mcp_whitelist,
-        python_whitelist=python_whitelist
+        mcp_whitelist=mcp_whitelist, python_whitelist=python_whitelist
     )
 
-    logger.info(f"Initialized draft provider with {len(tools_dict)} tools (pubmed metadata search only)")
+    logger.info(
+        f"Initialized draft provider with {len(tools_dict)} tools (pubmed metadata search only)"
+    )
 
     # calculate dynamic iteration budget based on hypotheses count
     max_iterations = get_draft_max_iterations(count)
@@ -106,7 +102,7 @@ async def draft_hypotheses(
         preferences=preferences,
         attributes=attributes,
         user_hypotheses=user_hypotheses,
-        max_iterations=max_iterations
+        max_iterations=max_iterations,
     )
 
     # write prompt to disk
@@ -136,7 +132,9 @@ async def draft_hypotheses(
         if tool_name == "search_pubmed":
             tool_call_count["pubmed_search"] += 1
             searches_performed_draft.append(tool_name)
-            logger.info(f"Draft: PubMed search #{tool_call_count['pubmed_search']} (metadata only, no fulltext)")
+            logger.info(
+                f"Draft: PubMed search #{tool_call_count['pubmed_search']} (metadata only, no fulltext)"
+            )
 
         # execute tool
         return await provider.execute_tool_call(tool_call)
@@ -154,13 +152,15 @@ async def draft_hypotheses(
             tool_executor=draft_tracked_executor,
             max_tokens=draft_max_tokens,
             temperature=HIGH_TEMPERATURE,
-            max_iterations=max_iterations
+            max_iterations=max_iterations,
         )
     except Exception as e:
         logger.error(f"Draft phase failed: {e}")
         raise
 
-    logger.info(f"Draft phase complete: {tool_call_count['pubmed_search']} PubMed searches (metadata only, fulltext deferred to validate)")
+    logger.info(
+        f"Draft phase complete: {tool_call_count['pubmed_search']} PubMed searches (metadata only, fulltext deferred to validate)"
+    )
 
     # parse JSON response (strip markdown if present, then use repair logic)
     response_text = final_response.strip()
@@ -188,7 +188,7 @@ async def draft_hypotheses(
             response_text = response_text[json_start:json_end].strip()
 
     # additional cleanup - remove leading/trailing whitespace and newlines
-    response_text = response_text.strip().strip('\n').strip()
+    response_text = response_text.strip().strip("\n").strip()
 
     # use attempt_json_repair for robust parsing
     response_data, was_repaired = attempt_json_repair(response_text, allow_major_repairs=True)

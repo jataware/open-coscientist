@@ -214,7 +214,7 @@ class HypothesisGenerator:
     ) -> Tuple[WorkflowState, float, str]:
         """
         Prepare generation by setting up state, checking MCP availability, and building graph.
-        
+
         Returns:
             Tuple of (initial_state, start_time, run_id)
         """
@@ -233,7 +233,7 @@ class HypothesisGenerator:
         # Determine if literature review node should be included
         # Check if explicitly set in opts first to avoid unnecessary MCP checks
         enable_literature_review_node_opt = opts.get("enable_literature_review_node")
-        
+
         # Only check MCP availability if literature review node is requested (explicitly or by default)
         # If explicitly False, skip MCP checks entirely
         if enable_literature_review_node_opt is False:
@@ -261,7 +261,9 @@ class HypothesisGenerator:
             enable_literature_review_node = opts.get("enable_literature_review_node", mcp_available)
 
             if not mcp_available and enable_literature_review_node:
-                logger.warning("Literature review node requested but MCP server unavailable - disabling")
+                logger.warning(
+                    "Literature review node requested but MCP server unavailable - disabling"
+                )
                 enable_literature_review_node = False
 
         # Determine if generate node should use tool-calling generation
@@ -295,11 +297,15 @@ class HypothesisGenerator:
         # dev isolation mode: force cache on lit review, allocate all to lit tools
         dev_test_lit_tools_isolation = opts.get("dev_test_lit_tools_isolation", False)
         if dev_test_lit_tools_isolation:
-            logger.info("Dev isolation mode enabled: forcing lit review cache + all hypotheses to lit tools")
+            logger.info(
+                "Dev isolation mode enabled: forcing lit review cache + all hypotheses to lit tools"
+            )
 
         # Build graph if not already built, or rebuild if literature review setting changed
         if self._graph is None:
-            self._graph = self._build_graph(enable_literature_review_node=enable_literature_review_node)
+            self._graph = self._build_graph(
+                enable_literature_review_node=enable_literature_review_node
+            )
 
         # Initialize state
         initial_state: WorkflowState = {
@@ -500,11 +506,11 @@ class HypothesisGenerator:
     ) -> AsyncIterator[Tuple[str, Dict[str, Any]]]:
         """
         Internal method to handle streaming generation.
-        
+
         Args:
             initial_state: Prepared workflow state
             start_time: Start time for execution timing
-            
+
         Yields:
             Tuple of (node_name, state_dict) after each node completes
         """
@@ -544,22 +550,28 @@ class HypothesisGenerator:
                         logger.debug("updated research_plan")
                     if "tournament_matchups" in node_state:
                         cumulative_state["tournament_matchups"] = node_state["tournament_matchups"]
-                        logger.debug(f"updated tournament_matchups: {len(node_state['tournament_matchups'])} items")
+                        logger.debug(
+                            f"updated tournament_matchups: {len(node_state['tournament_matchups'])} items"
+                        )
                     if "evolution_details" in node_state:
                         cumulative_state["evolution_details"] = node_state["evolution_details"]
-                        logger.debug(f"updated evolution_details: {len(node_state['evolution_details'])} items")
+                        logger.debug(
+                            f"updated evolution_details: {len(node_state['evolution_details'])} items"
+                        )
                     if "similarity_clusters" in node_state:
                         cumulative_state["similarity_clusters"] = node_state["similarity_clusters"]
                         logger.debug("updated similarity_clusters")
                     if "current_iteration" in node_state:
                         cumulative_state["current_iteration"] = node_state["current_iteration"]
-                        logger.debug(f"updated current_iteration: {node_state['current_iteration']}")
+                        logger.debug(
+                            f"updated current_iteration: {node_state['current_iteration']}"
+                        )
                     if "metrics" in node_state:
                         # Import merge_metrics to properly combine metrics (don't just replace!)
                         from .state import merge_metrics
+
                         cumulative_state["metrics"] = merge_metrics(
-                            cumulative_state["metrics"],
-                            node_state["metrics"]
+                            cumulative_state["metrics"], node_state["metrics"]
                         )
                         logger.debug(
                             f"merged metrics: reviews={cumulative_state['metrics'].reviews_count}, "
@@ -568,18 +580,32 @@ class HypothesisGenerator:
                             f"llm_calls={cumulative_state['metrics'].llm_calls}"
                         )
                     if "articles_with_reasoning" in node_state:
-                        cumulative_state["articles_with_reasoning"] = node_state["articles_with_reasoning"]
-                        chars = len(node_state["articles_with_reasoning"]) if node_state["articles_with_reasoning"] else 0
+                        cumulative_state["articles_with_reasoning"] = node_state[
+                            "articles_with_reasoning"
+                        ]
+                        chars = (
+                            len(node_state["articles_with_reasoning"])
+                            if node_state["articles_with_reasoning"]
+                            else 0
+                        )
                         logger.debug(f"updated articles_with_reasoning: {chars} chars")
                     if "literature_review_queries" in node_state:
-                        cumulative_state["literature_review_queries"] = node_state["literature_review_queries"]
-                        logger.debug(f"updated literature_review_queries: {len(node_state['literature_review_queries'])} queries")
+                        cumulative_state["literature_review_queries"] = node_state[
+                            "literature_review_queries"
+                        ]
+                        logger.debug(
+                            f"updated literature_review_queries: {len(node_state['literature_review_queries'])} queries"
+                        )
                     if "articles" in node_state:
                         cumulative_state["articles"] = node_state["articles"]
                         logger.debug(f"updated articles: {len(node_state['articles'])} items")
                     if "debate_transcripts" in node_state:
                         cumulative_state["debate_transcripts"] = node_state["debate_transcripts"]
-                        count = len(node_state["debate_transcripts"]) if node_state["debate_transcripts"] else 0
+                        count = (
+                            len(node_state["debate_transcripts"])
+                            if node_state["debate_transcripts"]
+                            else 0
+                        )
                         logger.debug(f"updated debate_transcripts: {count} debates")
 
                     # Yield the node name and CUMULATIVE state
@@ -611,6 +637,7 @@ class HypothesisGenerator:
         except Exception as e:
             logger.error(f"Hypothesis generation streaming failed: {e}", exc_info=True)
             raise
+
 
 # Export for backwards compatibility
 __all__ = ["HypothesisGenerator"]

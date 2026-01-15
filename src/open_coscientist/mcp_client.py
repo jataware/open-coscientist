@@ -64,7 +64,9 @@ class MCPToolClient:
         # Convert to OpenAI format for LiteLLM
         self._openai_tools = [convert_to_openai_tool(tool) for tool in tools]
 
-        logger.debug(f"MCP client initialized with {len(self._tools_dict)} tools: {list(self._tools_dict.keys())}")
+        logger.debug(
+            f"MCP client initialized with {len(self._tools_dict)} tools: {list(self._tools_dict.keys())}"
+        )
 
     async def call_tool(self, tool_name: str, **kwargs) -> str:
         """
@@ -99,8 +101,8 @@ class MCPToolClient:
 
         # Wrap to support earlier/recent langchain versions
         if isinstance(result, list) and len(result) > 0:
-            if isinstance(result[0], dict) and 'text' in result[0]:
-                result = result[0]['text']
+            if isinstance(result[0], dict) and "text" in result[0]:
+                result = result[0]["text"]
 
         logger.debug(
             f"mcp tool result for {tool_name}: "
@@ -130,16 +132,20 @@ class MCPToolClient:
         # Execute using the original MCP tool
         result = await self._tools_dict[tool_name].ainvoke(tool_args)
 
-        logger.debug(f"mcp tool result for {tool_name}: {str(result)[:200]}{'...' if len(str(result)) > 200 else ''}")
+        logger.debug(
+            f"mcp tool result for {tool_name}: {str(result)[:200]}{'...' if len(str(result)) > 200 else ''}"
+        )
 
         return {
             "role": "tool",
             "name": tool_name,
             "tool_call_id": tool_call.id,
-            "content": result  # MCP tools return strings (often JSON)
+            "content": result,  # MCP tools return strings (often JSON)
         }
 
-    def get_tools(self, whitelist: Optional[List[str]] = None) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    def get_tools(
+        self, whitelist: Optional[List[str]] = None
+    ) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
         """
         Get MCP tools, optionally filtered by whitelist.
 
@@ -159,9 +165,15 @@ class MCPToolClient:
 
         # Filter tools by whitelist
         filtered_tools_dict = {k: v for k, v in self._tools_dict.items() if k in whitelist}
-        filtered_openai_tools = [convert_to_openai_tool(filtered_tools_dict[k]) for k in whitelist if k in filtered_tools_dict]
+        filtered_openai_tools = [
+            convert_to_openai_tool(filtered_tools_dict[k])
+            for k in whitelist
+            if k in filtered_tools_dict
+        ]
 
-        logger.debug(f"filtered to {len(filtered_tools_dict)} tools: {list(filtered_tools_dict.keys())}")
+        logger.debug(
+            f"filtered to {len(filtered_tools_dict)} tools: {list(filtered_tools_dict.keys())}"
+        )
 
         return filtered_tools_dict, filtered_openai_tools
 
@@ -203,7 +215,9 @@ async def check_pubmed_available_via_mcp(server_url: Optional[str] = None) -> bo
         tools_dict, _ = mcp_client.get_tools(whitelist=["check_pubmed_available"])
 
         if "check_pubmed_available" not in tools_dict:
-            logger.warning(f"Tool check_pubmed_available not found on MCP server. Available tools: {list(all_tools_dict.keys())}")
+            logger.warning(
+                f"Tool check_pubmed_available not found on MCP server. Available tools: {list(all_tools_dict.keys())}"
+            )
             return False
 
         logger.debug("check_pubmed_available tool found, executing")
@@ -248,7 +262,9 @@ async def check_mcp_available(server_url: Optional[str] = None) -> bool:
 
         # check if we got any tools
         if test_client._tools_dict and len(test_client._tools_dict) > 0:
-            logger.info(f"MCP server available at {server_url} with {len(test_client._tools_dict)} tools")
+            logger.info(
+                f"MCP server available at {server_url} with {len(test_client._tools_dict)} tools"
+            )
             return True
         else:
             logger.warning("MCP server responded but provided no tools")

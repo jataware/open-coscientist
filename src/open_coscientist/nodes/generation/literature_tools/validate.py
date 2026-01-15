@@ -64,6 +64,7 @@ async def validate_hypotheses(
     if not shared_slug:
         # fallback if draft phase didn't set it
         import hashlib
+
         shared_slug = "research_" + hashlib.md5(research_goal.encode()).hexdigest()[:8]
         logger.warning(f"Draft phase didn't set corpus slug, using fallback: {shared_slug}")
     else:
@@ -74,7 +75,9 @@ async def validate_hypotheses(
 
     for idx, draft in enumerate(draft_hypotheses, 1):
         hypothesis_text = draft.get("text", "")
-        logger.info(f"Analyzing hypothesis {idx}/{len(draft_hypotheses)}: {hypothesis_text[:80]}...")
+        logger.info(
+            f"Analyzing hypothesis {idx}/{len(draft_hypotheses)}: {hypothesis_text[:80]}..."
+        )
 
         # search for papers related to this hypothesis
         try:
@@ -83,7 +86,7 @@ async def validate_hypotheses(
                 query=hypothesis_text[:200],  # use hypothesis text as query
                 max_papers=GENERATE_LIT_TOOL_MAX_PAPERS,
                 slug=shared_slug,
-                run_id=run_id
+                run_id=run_id,
             )
 
             # parse result (mcp returns JSON string)
@@ -103,7 +106,7 @@ async def validate_hypotheses(
 
         async def analyze_paper_novelty(paper_id: str, metadata: dict) -> dict:
             """Analyze single paper for novelty assessment"""
-            fulltext = metadata.get('fulltext', '')
+            fulltext = metadata.get("fulltext", "")
 
             # truncate if too long
             max_chars = 200_000
@@ -111,9 +114,9 @@ async def validate_hypotheses(
                 fulltext = fulltext[:max_chars] + "\n\n[... truncated for length ...]"
 
             # extract paper info
-            title = metadata.get('title', 'Unknown')
-            authors = metadata.get('authors', [])
-            year = metadata.get('year')
+            title = metadata.get("title", "Unknown")
+            authors = metadata.get("authors", [])
+            year = metadata.get("year")
 
             # get analysis prompt
             prompt = get_hypothesis_novelty_analysis_prompt(
@@ -121,26 +124,22 @@ async def validate_hypotheses(
                 title=title,
                 authors=authors,
                 year=year,
-                fulltext=fulltext
+                fulltext=fulltext,
             )
 
             # call LLM for structured analysis
             try:
                 analysis = await call_llm_json(
                     prompt=prompt,
-                    model_name=state['model_name'],
+                    model_name=state["model_name"],
                     json_schema=HYPOTHESIS_NOVELTY_ANALYSIS_SCHEMA,
                     max_tokens=EXTENDED_MAX_TOKENS,
-                    temperature=HIGH_TEMPERATURE
+                    temperature=HIGH_TEMPERATURE,
                 )
 
                 return {
-                    'paper_metadata': {
-                        'paper_id': paper_id,
-                        'title': title,
-                        'year': year
-                    },
-                    'analysis': analysis
+                    "paper_metadata": {"paper_id": paper_id, "title": title, "year": year},
+                    "analysis": analysis,
                 }
             except Exception as e:
                 logger.error(f"Failed to analyze paper {paper_id} for hypothesis {idx}: {e}")
@@ -152,7 +151,9 @@ async def validate_hypotheses(
             novelty_analysis_tasks.append(task)
 
         if novelty_analysis_tasks:
-            logger.info(f"Running {len(novelty_analysis_tasks)} novelty analyses in parallel for hypothesis {idx}")
+            logger.info(
+                f"Running {len(novelty_analysis_tasks)} novelty analyses in parallel for hypothesis {idx}"
+            )
             novelty_analyses_results = await asyncio.gather(*novelty_analysis_tasks)
 
             # filter out failed analyses
@@ -163,37 +164,34 @@ async def validate_hypotheses(
             logger.warning(f"No papers with fulltext found for hypothesis {idx}")
 
         # collect hypothesis with its analyses
-        hypotheses_with_analyses.append({
-            "draft": draft,
-            "novelty_analyses": novelty_analyses
-        })
+        hypotheses_with_analyses.append({"draft": draft, "novelty_analyses": novelty_analyses})
 
     # stage 2: synthesis - decide approve/refine/pivot for all hypotheses
     logger.info(f"Running validation synthesis for {len(hypotheses_with_analyses)} hypotheses")
 
     synthesis_prompt = get_hypothesis_validation_synthesis_prompt(
-        research_goal=research_goal,
-        hypotheses_with_analyses=hypotheses_with_analyses
+        research_goal=research_goal, hypotheses_with_analyses=hypotheses_with_analyses
     )
 
     # scale token budget based on hypotheses count and analyses depth
     # each hypothesis needs ~2500-3500 tokens for complete justification + validation
-    synthesis_max_tokens = min(
-        EXTENDED_MAX_TOKENS + (len(hypotheses_with_analyses) * 2500),
-        20000
+    synthesis_max_tokens = min(EXTENDED_MAX_TOKENS + (len(hypotheses_with_analyses) * 2500), 20000)
+    logger.debug(
+        f"Synthesis token budget: {synthesis_max_tokens} for {len(hypotheses_with_analyses)} hypotheses"
     )
-    logger.debug(f"Synthesis token budget: {synthesis_max_tokens} for {len(hypotheses_with_analyses)} hypotheses")
 
     # call synthesis agent with structured JSON schema
     try:
         response_data = await call_llm_json(
             prompt=synthesis_prompt,
-            model_name=state['model_name'],
+            model_name=state["model_name"],
             json_schema=HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA,
             max_tokens=synthesis_max_tokens,
-            temperature=HIGH_TEMPERATURE
+            temperature=HIGH_TEMPERATURE,
         )
-        logger.debug(f"Validation synthesis returned {len(response_data.get('hypotheses', []))} hypotheses")
+        logger.debug(
+            f"Validation synthesis returned {len(response_data.get('hypotheses', []))} hypotheses"
+        )
     except Exception as e:
         logger.error(f"Validation synthesis failed: {e}")
         raise

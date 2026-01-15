@@ -28,7 +28,7 @@ async def generate_with_literature(
     articles_with_reasoning: str,
     preferences: Optional[str],
     attributes: Optional[List[str]],
-    user_hypotheses: Optional[List[str]]
+    user_hypotheses: Optional[List[str]],
 ) -> List[Hypothesis]:
     """
     generate hypotheses using pre-processed literature review

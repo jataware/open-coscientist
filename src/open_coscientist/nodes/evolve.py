@@ -55,7 +55,7 @@ async def evolve_single_hypothesis(
     research_goal: str,
     model_name: str,
     removed_duplicates: List[str],
-    supervisor_guidance: Dict[str, Any] | None = None
+    supervisor_guidance: Dict[str, Any] | None = None,
 ) -> Hypothesis:
     """
     Evolve a single hypothesis with full context to prevent convergence.
@@ -77,28 +77,28 @@ async def evolve_single_hypothesis(
     # Log meta review usage with colorful output
     logger.debug("\n=== evolve single hypothesis ===")
     logger.debug(f"using meta review for evolution")
-    
+
     # Display meta review details
     common_strengths = meta_review.get("common_strengths", [])
     common_weaknesses = meta_review.get("common_weaknesses", [])
     strategic_recommendations = meta_review.get("strategic_recommendations", [])
     emerging_themes = meta_review.get("emerging_themes", [])
-    
+
     if common_strengths:
         logger.debug(f"common Strengths ({len(common_strengths)}):")
         for strength in common_strengths[:3]:  # Show first 3
             logger.debug(f"- {strength[:100]}{'...' if len(strength) > 100 else ''}")
-    
+
     if common_weaknesses:
         logger.debug(f"common Weaknesses ({len(common_weaknesses)}):")
         for weakness in common_weaknesses[:3]:  # Show first 3
             logger.debug(f"- {weakness[:100]}{'...' if len(weakness) > 100 else ''}")
-    
+
     if strategic_recommendations:
         logger.debug(f"strategic Recommendations ({len(strategic_recommendations)}):")
         for rec in strategic_recommendations[:3]:  # Show first 3
             logger.debug(f"- {rec}")
-    
+
     if emerging_themes:
         logger.debug(f"emerging Themes ({len(emerging_themes)}):")
         for theme in emerging_themes[:3]:  # Show first 3
@@ -108,27 +108,33 @@ async def evolve_single_hypothesis(
     review_feedback = ""
     if hypothesis.reviews:
         latest_review = hypothesis.reviews[-1]
-        review_feedback = json.dumps({
-            "overall_score": latest_review.overall_score,
-            "review_summary": latest_review.review_summary,
-            "constructive_feedback": latest_review.constructive_feedback,
-            "scores": latest_review.scores
-        }, indent=2)
+        review_feedback = json.dumps(
+            {
+                "overall_score": latest_review.overall_score,
+                "review_summary": latest_review.review_summary,
+                "constructive_feedback": latest_review.constructive_feedback,
+                "scores": latest_review.scores,
+            },
+            indent=2,
+        )
 
     # Format meta-review insights
-    meta_review_insights = json.dumps({
-        "common_strengths": meta_review.get("common_strengths", []),
-        "common_weaknesses": meta_review.get("common_weaknesses", []),
-        "strategic_recommendations": meta_review.get("strategic_recommendations", []),
-        "emerging_themes": meta_review.get("emerging_themes", [])
-    }, indent=2)
+    meta_review_insights = json.dumps(
+        {
+            "common_strengths": meta_review.get("common_strengths", []),
+            "common_weaknesses": meta_review.get("common_weaknesses", []),
+            "strategic_recommendations": meta_review.get("strategic_recommendations", []),
+            "emerging_themes": meta_review.get("emerging_themes", []),
+        },
+        indent=2,
+    )
 
     # Format supervisor guidance for evolution
     supervisor_guidance_text = ""
     if supervisor_guidance and isinstance(supervisor_guidance, dict):
         workflow_plan = supervisor_guidance.get("workflow_plan", {})
         evolution_phase = workflow_plan.get("evolution_phase", {})
-        
+
         if evolution_phase:
             guidance_sections = []
             guidance_sections.append("## Supervisor Guidance for Evolution\n")
@@ -138,21 +144,30 @@ async def evolve_single_hypothesis(
                     priorities = ", ".join(priorities)
                 guidance_sections.append(f"**Refinement Priorities:** {priorities}\n")
             if evolution_phase.get("iteration_strategy"):
-                guidance_sections.append(f"**Iteration Strategy:** {evolution_phase['iteration_strategy']}\n")
-            guidance_sections.append("\nUse this guidance to align your refinement with the research plan.\n")
+                guidance_sections.append(
+                    f"**Iteration Strategy:** {evolution_phase['iteration_strategy']}\n"
+                )
+            guidance_sections.append(
+                "\nUse this guidance to align your refinement with the research plan.\n"
+            )
             supervisor_guidance_text = "".join(guidance_sections)
-    
+
     # Build context-aware evolution prompt
-    prompt, schema = load_prompt_with_schema("evolution", {
-        "original_hypothesis": hypothesis.text,
-        "review_feedback": review_feedback,
-        "meta_review_insights": meta_review_insights,
-        "supervisor_guidance": supervisor_guidance_text
-    })
+    prompt, schema = load_prompt_with_schema(
+        "evolution",
+        {
+            "original_hypothesis": hypothesis.text,
+            "review_feedback": review_feedback,
+            "meta_review_insights": meta_review_insights,
+            "supervisor_guidance": supervisor_guidance_text,
+        },
+    )
 
     # Add critical diversity instruction
     other_hyps_formatted = "\n".join([f"- {text[:200]}..." for text in other_hypotheses_texts])
-    removed_dups_formatted = "\n".join([f"- {text[:200]}..." for text in removed_duplicates[-5:]])  # Last 5
+    removed_dups_formatted = "\n".join(
+        [f"- {text[:200]}..." for text in removed_duplicates[-5:]]
+    )  # Last 5
 
     diversity_instruction = f"""
 
@@ -185,7 +200,7 @@ DO:
     # base: 8000, add 800 per additional hypothesis context beyond baseline
     scaled_max_tokens = min(
         EXTENDED_MAX_TOKENS + (len(other_hypotheses_texts) * 800),
-        16000  # model limit for most providers
+        16000,  # model limit for most providers
     )
 
     # Call LLM to evolve hypothesis
@@ -239,7 +254,7 @@ DO:
         "evolved": refined_text,
         "rationale": refinement_summary,
         "changes": [],  # Not in evolution.md prompt format
-        "improvements": []  # Not in evolution.md prompt format
+        "improvements": [],  # Not in evolution.md prompt format
     }
 
     return hypothesis, evolution_detail
@@ -269,10 +284,13 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
 
     # Emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("evolve_start", {
-            "message": f"Evolving top {actual_count} hypotheses...",
-            "progress": PROGRESS_EVOLVE_START
-        })
+        await state["progress_callback"](
+            "evolve_start",
+            {
+                "message": f"Evolving top {actual_count} hypotheses...",
+                "progress": PROGRESS_EVOLVE_START,
+            },
+        )
 
     # Get top-k hypotheses
     top_k = hypotheses[:evolution_max_count]
@@ -297,7 +315,7 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
             research_goal=state["research_goal"],
             model_name=state["model_name"],
             removed_duplicates=removed_duplicates,
-            supervisor_guidance=supervisor_guidance
+            supervisor_guidance=supervisor_guidance,
         )
         for hyp in top_k
     ]
@@ -318,24 +336,32 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
     original_count = len(hypotheses)
     hypotheses = evolved_hypotheses
     discarded_count = original_count - len(evolved_hypotheses)
-    logger.info(f"Keeping only {len(hypotheses)} evolved hypotheses (discarded {discarded_count} lower-ranked)")
+    logger.info(
+        f"Keeping only {len(hypotheses)} evolved hypotheses (discarded {discarded_count} lower-ranked)"
+    )
 
-    logger.info(f"Evolved {len(evolved_hypotheses)} hypotheses, {len(evolution_details)} with changes")
+    logger.info(
+        f"Evolved {len(evolved_hypotheses)} hypotheses, {len(evolution_details)} with changes"
+    )
 
     # Emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("evolve_complete", {
-            "message": f"Evolved {len(evolved_hypotheses)} hypotheses",
-            "progress": PROGRESS_EVOLVE_COMPLETE,
-            "evolved_count": len(evolved_hypotheses)
-        })
+        await state["progress_callback"](
+            "evolve_complete",
+            {
+                "message": f"Evolved {len(evolved_hypotheses)} hypotheses",
+                "progress": PROGRESS_EVOLVE_COMPLETE,
+                "evolved_count": len(evolved_hypotheses),
+            },
+        )
 
     # Update metrics (deltas only, merge_metrics will add to existing state)
     metrics = create_metrics_update(
-        llm_calls_delta=len(evolved_hypotheses),
-        evolutions_count_delta=len(evolved_hypotheses)
+        llm_calls_delta=len(evolved_hypotheses), evolutions_count_delta=len(evolved_hypotheses)
     )
-    logger.debug(f"evolve node creating metrics delta: evolutions={len(evolved_hypotheses)}, llm_calls={len(evolved_hypotheses)}")
+    logger.debug(
+        f"evolve node creating metrics delta: evolutions={len(evolved_hypotheses)}, llm_calls={len(evolved_hypotheses)}"
+    )
 
     return {
         "hypotheses": hypotheses,
@@ -345,10 +371,7 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
             {
                 "role": "assistant",
                 "content": f"Evolved {len(evolved_hypotheses)} hypotheses",
-                "metadata": {
-                    "phase": "evolve",
-                    "evolved_count": len(evolved_hypotheses)
-                }
+                "metadata": {"phase": "evolve", "evolved_count": len(evolved_hypotheses)},
             }
-        ]
+        ],
     }

@@ -315,9 +315,7 @@ class ConsoleReporter:
         """Display ranking results."""
         self.console.print()
         self.console.rule("[bold green]Ranking Results[/bold green]")
-        rank_table = Table(
-            title="Hypothesis Rankings", show_header=True, header_style="bold green"
-        )
+        rank_table = Table(title="Hypothesis Rankings", show_header=True, header_style="bold green")
         rank_table.add_column("Rank", style="cyan", justify="right")
         rank_table.add_column("Score", style="yellow", justify="right")
         rank_table.add_column("Hypothesis (truncated)", style="white")
@@ -397,9 +395,7 @@ class ConsoleReporter:
             self.console.rule("[bold blue]Meta Review[/bold blue]")
             self.console.print(
                 Panel(
-                    Syntax(
-                        json.dumps(state["meta_review"], indent=2), "json", theme="monokai"
-                    ),
+                    Syntax(json.dumps(state["meta_review"], indent=2), "json", theme="monokai"),
                     title="[blue]Cross-hypothesis Insights[/blue]",
                     border_style="blue",
                     expand=False,
@@ -550,7 +546,7 @@ def run_console(coro: Coroutine) -> None:
             run_console(main())
     """
     # suppress RuntimeWarnings from LiteLLM's async cleanup during shutdown
-    warnings.filterwarnings('ignore', category=RuntimeWarning, module='litellm')
+    warnings.filterwarnings("ignore", category=RuntimeWarning, module="litellm")
 
     # use manual event loop management for graceful shutdown
     # this prevents SSL transport errors when Ctrl+C is pressed

@@ -127,7 +127,9 @@ class LLMCache:
                 return cached_data["response"]
             except (json.JSONDecodeError, KeyError, IOError, OSError) as e:
                 # Handle race conditions: file might be partially written or locked
-                logger.debug(f"cache read failed for {cache_key[:8]}... (may be concurrent write): {e}")
+                logger.debug(
+                    f"cache read failed for {cache_key[:8]}... (may be concurrent write): {e}"
+                )
                 # Don't remove file on IOError - it might just be locked by another process
                 if isinstance(e, (json.JSONDecodeError, KeyError)):
                     # Only remove on actual corruption, not on I/O errors
@@ -251,7 +253,9 @@ def get_cache() -> LLMCache:
 
     if _global_cache is None:
         # Check environment variable for cache configuration
-        cache_enabled_str = os.getenv("COSCIENTIST_CACHE_ENABLED", str(DEFAULT_CACHE_ENABLED).lower())
+        cache_enabled_str = os.getenv(
+            "COSCIENTIST_CACHE_ENABLED", str(DEFAULT_CACHE_ENABLED).lower()
+        )
         cache_enabled = cache_enabled_str.lower() == "true"
         cache_dir = os.getenv("COSCIENTIST_CACHE_DIR", DEFAULT_CACHE_DIR)
 
@@ -350,7 +354,9 @@ class NodeCache:
         logger.debug(f"node cache MISS for {node_name} (key {cache_key[:8]}...)")
         return None
 
-    def set(self, node_name: str, output: Dict[str, Any], force: bool = False, **key_params) -> None:
+    def set(
+        self, node_name: str, output: Dict[str, Any], force: bool = False, **key_params
+    ) -> None:
         """
         Store node output in cache.
 
@@ -428,7 +434,9 @@ def get_node_cache() -> NodeCache:
 
     if _global_node_cache is None:
         # reuse same cache enabled flag as LLM cache
-        cache_enabled_str = os.getenv("COSCIENTIST_CACHE_ENABLED", str(DEFAULT_CACHE_ENABLED).lower())
+        cache_enabled_str = os.getenv(
+            "COSCIENTIST_CACHE_ENABLED", str(DEFAULT_CACHE_ENABLED).lower()
+        )
         cache_enabled = cache_enabled_str.lower() in ("true", "1", "yes")
         cache_dir = os.getenv("COSCIENTIST_CACHE_DIR", DEFAULT_CACHE_DIR)
 

@@ -104,7 +104,7 @@ def merge_metrics(existing: ExecutionMetrics, new: ExecutionMetrics) -> Executio
         evolutions_count=existing.evolutions_count + new.evolutions_count,
         llm_calls=existing.llm_calls + new.llm_calls,
         total_time=new.total_time if new.total_time > 0 else existing.total_time,
-        phase_times=merged_phase_times
+        phase_times=merged_phase_times,
     )
 
     return merged

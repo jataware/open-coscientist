@@ -44,29 +44,26 @@ async def proximity_node(state: WorkflowState) -> Dict[str, Any]:
 
     # Emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("proximity_start", {
-            "message": f"Analyzing similarity of {len(hypotheses)} hypotheses...",
-            "progress": PROGRESS_PROXIMITY_START
-        })
+        await state["progress_callback"](
+            "proximity_start",
+            {
+                "message": f"Analyzing similarity of {len(hypotheses)} hypotheses...",
+                "progress": PROGRESS_PROXIMITY_START,
+            },
+        )
 
     # Prepare hypotheses for similarity analysis
     hypotheses_for_analysis = [
-        {
-            "text": hyp.text,
-            "score": hyp.score,
-            "elo_rating": hyp.elo_rating,
-            "index": i
-        }
+        {"text": hyp.text, "score": hyp.score, "elo_rating": hyp.elo_rating, "index": i}
         for i, hyp in enumerate(hypotheses)
     ]
 
     # Get supervisor guidance from state
     supervisor_guidance = state.get("supervisor_guidance")
-    
+
     # Call LLM to cluster by similarity
     prompt, schema = get_proximity_prompt(
-        hypotheses_for_analysis,
-        supervisor_guidance=supervisor_guidance
+        hypotheses_for_analysis, supervisor_guidance=supervisor_guidance
     )
 
     response = await call_llm_json(
@@ -98,7 +95,7 @@ async def proximity_node(state: WorkflowState) -> Dict[str, Any]:
                 if hyp.text[:100] == hyp_text[:100]:
                     hyp.similarity_cluster_id = cluster_id
                     # Store similarity degree in a custom attribute
-                    if not hasattr(hyp, 'similarity_degree'):
+                    if not hasattr(hyp, "similarity_degree"):
                         hyp.similarity_degree = similarity_degree
                     break
 
@@ -122,8 +119,10 @@ async def proximity_node(state: WorkflowState) -> Dict[str, Any]:
             continue
 
         # Separate by similarity degree
-        high_similarity = [h for h in cluster_hypotheses if getattr(h, 'similarity_degree', 'low') == 'high']
-        others = [h for h in cluster_hypotheses if getattr(h, 'similarity_degree', 'low') != 'high']
+        high_similarity = [
+            h for h in cluster_hypotheses if getattr(h, "similarity_degree", "low") == "high"
+        ]
+        others = [h for h in cluster_hypotheses if getattr(h, "similarity_degree", "low") != "high"]
 
         # Keep all non-high-similarity hypotheses
         hypotheses_to_keep.extend(others)
@@ -139,14 +138,16 @@ async def proximity_node(state: WorkflowState) -> Dict[str, Any]:
 
             # Remove the rest
             for duplicate in high_similarity[1:]:
-                removed_duplicates.append({
-                    "text": duplicate.text,
-                    "cluster_id": cluster_id,
-                    "reason": "high_similarity_duplicate",
-                    "kept_instead": best.text[:200],
-                    "elo_rating": duplicate.elo_rating,
-                    "score": duplicate.score
-                })
+                removed_duplicates.append(
+                    {
+                        "text": duplicate.text,
+                        "cluster_id": cluster_id,
+                        "reason": "high_similarity_duplicate",
+                        "kept_instead": best.text[:200],
+                        "elo_rating": duplicate.elo_rating,
+                        "score": duplicate.score,
+                    }
+                )
                 logger.info(
                     f"Removed duplicate from cluster {cluster_id}: "
                     f"{duplicate.text[:100]}... (Elo: {duplicate.elo_rating})"
@@ -159,25 +160,24 @@ async def proximity_node(state: WorkflowState) -> Dict[str, Any]:
     )
 
     if removed_duplicates:
-        logger.warning(
-            f"Removed {len(removed_duplicates)} high-similarity duplicates:"
-        )
+        logger.warning(f"Removed {len(removed_duplicates)} high-similarity duplicates:")
         for dup in removed_duplicates[:3]:  # Log first 3
             logger.warning(f"- {dup['text'][:80]}...")
 
     # Emit progress
     if state.get("progress_callback"):
-        await state["progress_callback"]("proximity_complete", {
-            "message": f"Removed {len(removed_duplicates)} duplicates",
-            "progress": PROGRESS_PROXIMITY_COMPLETE,
-            "duplicates_removed": len(removed_duplicates),
-            "remaining": len(hypotheses_to_keep)
-        })
+        await state["progress_callback"](
+            "proximity_complete",
+            {
+                "message": f"Removed {len(removed_duplicates)} duplicates",
+                "progress": PROGRESS_PROXIMITY_COMPLETE,
+                "duplicates_removed": len(removed_duplicates),
+                "remaining": len(hypotheses_to_keep),
+            },
+        )
 
     # Update metrics (deltas only, merge_metrics will add to existing state)
-    metrics = create_metrics_update(
-        llm_calls_delta=1
-    )
+    metrics = create_metrics_update(llm_calls_delta=1)
 
     # Update removed duplicates list
     all_removed_duplicates = state.get("removed_duplicates", []) + removed_duplicates
@@ -199,8 +199,8 @@ async def proximity_node(state: WorkflowState) -> Dict[str, Any]:
                 "metadata": {
                     "phase": "proximity",
                     "duplicates_removed": len(removed_duplicates),
-                    "clusters": len(similarity_clusters)
-                }
+                    "clusters": len(similarity_clusters),
+                },
             }
-        ]
+        ],
     }
