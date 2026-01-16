@@ -2,8 +2,9 @@
 reflection node - analyzes hypotheses against literature observations.
 """
 
+import asyncio
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from ..constants import (
     EXTENDED_MAX_TOKENS,
@@ -12,10 +13,64 @@ from ..constants import (
     PROGRESS_REFLECTION_COMPLETE,
 )
 from ..llm import call_llm_json
+from ..models import Hypothesis
 from ..prompts import get_reflection_prompt
 from ..state import WorkflowState
 
 logger = logging.getLogger(__name__)
+
+
+async def analyze_single_hypothesis(
+    hypothesis: Hypothesis,
+    articles_with_reasoning: str,
+    model_name: str,
+    hypothesis_index: int,
+    total_count: int
+) -> Optional[Dict[str, Any]]:
+    """
+    analyze a single hypothesis against literature observations.
+
+    args:
+        hypothesis: hypothesis to analyze
+        articles_with_reasoning: literature review context
+        model_name: llm model to use
+        hypothesis_index: index for logging (1-based)
+        total_count: total hypotheses count for logging
+
+    returns:
+        dict with classification and reasoning, or None if failed
+    """
+    logger.debug(f"\n→ analyzing hypothesis {hypothesis_index}/{total_count}")
+
+    # get reflection prompt
+    prompt, schema = get_reflection_prompt(
+        articles_with_reasoning=articles_with_reasoning,
+        hypothesis_text=hypothesis.text
+    )
+
+    try:
+        # call llm
+        response = await call_llm_json(
+            prompt=prompt,
+            model_name=model_name,
+            max_tokens=EXTENDED_MAX_TOKENS,
+            temperature=LOW_TEMPERATURE,
+            json_schema=schema,
+        )
+
+        classification = response.get("classification", "neutral")
+        reasoning = response.get("reasoning", "")
+
+        logger.debug(f"hypothesis {hypothesis_index} classification: {classification}")
+
+        return {
+            "classification": classification,
+            "reasoning": reasoning
+        }
+
+    except Exception as e:
+        logger.error(f"Reflection failed for hypothesis {hypothesis_index}: {e}")
+        return None
 
 
 async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
@@ -63,38 +118,33 @@ async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
             },
         )
 
-    # analyze each hypothesis
-    for i, hypothesis in enumerate(hypotheses):
-        logger.debug(f"\n→ analyzing hypothesis {i+1}/{len(hypotheses)}")
+    # analyze all hypotheses in parallel
+    logger.info(f"Running {len(hypotheses)} reflection analyses in parallel")
 
-        # get reflection prompt
-        prompt, schema = get_reflection_prompt(
+    analysis_tasks = [
+        analyze_single_hypothesis(
+            hypothesis=hyp,
             articles_with_reasoning=articles_with_reasoning,
-            hypothesis_text=hypothesis.text
+            model_name=state["model_name"],
+            hypothesis_index=i + 1,
+            total_count=len(hypotheses)
         )
+        for i, hyp in enumerate(hypotheses)
+    ]
 
-        try:
-            # call llm
-            response = await call_llm_json(
-                prompt=prompt,
-                model_name=state["model_name"],
-                max_tokens=EXTENDED_MAX_TOKENS,
-                temperature=LOW_TEMPERATURE,
-                json_schema=schema,
-            )
+    # gather all results
+    analysis_results = await asyncio.gather(*analysis_tasks)
 
-            # store reflection analysis on hypothesis
-            classification = response.get("classification", "neutral")
-            reasoning = response.get("reasoning", "")
-
+    # apply results to hypotheses
+    for hypothesis, result in zip(hypotheses, analysis_results):
+        if result:
+            classification = result.get("classification", "neutral")
+            reasoning = result.get("reasoning", "")
             # concatenate reasoning and classification into reflection_notes
             hypothesis.reflection_notes = f"{reasoning}\n\nClassification: {classification}"
-
-            logger.debug(f"classification: {classification}")
-
-        except Exception as e:
-            logger.error(f"Reflection failed for hypothesis {i+1}: {e}")
-            # continue with other hypotheses
+        else:
+            # analysis failed, set neutral classification
+            hypothesis.reflection_notes = "Analysis failed\n\nClassification: neutral"
 
     # emit progress
     if state.get("progress_callback"):
