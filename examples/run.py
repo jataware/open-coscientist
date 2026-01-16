@@ -13,6 +13,8 @@ sys.path.insert(
 )
 from open_coscientist import HypothesisGenerator
 from open_coscientist.console import ConsoleReporter, default_progress_callback, run_console
+from rich.console import Console
+from rich.panel import Panel
 """
 Prerequisites:
 - MCP server running (on http://localhost:8888/mcp)
@@ -21,9 +23,24 @@ which depends on the MODEL_NAME you set below.
 """
 
 MODEL_NAME = "gemini/gemini-2.5-flash"
-RESEARCH_GOAL = "Develop novel approaches for early detection of Alzheimer's disease using non-invasive biomarkers"
 
 async def main():
+    # Prompt user for research goal with rich formatting
+    console = Console()
+    console.print()
+    console.print(
+        Panel(
+            "[bold]Enter research goal[/bold]\n\n"
+            "[dim]For example:[/dim] Develop novel approaches for early detection of "
+            "Alzheimer's disease using non-invasive biomarkers",
+            title="[cyan]Research Goal[/cyan]",
+            border_style="cyan",
+        )
+    )
+    research_goal = console.input("\n[bold cyan]Research goal:[/bold cyan] ").strip()
+    if not research_goal:
+        console.print("[bold red]Error:[/bold red] Research goal cannot be empty.")
+        return
     generator = HypothesisGenerator(
         model_name=MODEL_NAME,
         max_iterations=2,
@@ -37,7 +54,7 @@ async def main():
     # wrap with built-in console/terminal reporter
     await reporter.run(
         event_stream=generator.generate_hypotheses(
-            research_goal=RESEARCH_GOAL,
+            research_goal=research_goal,
             progress_callback=default_progress_callback,
             # explicitly enable literature review/generate with tool calling
             opts={
@@ -46,7 +63,7 @@ async def main():
             },
             stream=True,
         ),
-        research_goal=RESEARCH_GOAL,
+        research_goal=research_goal,
     )
 
 
