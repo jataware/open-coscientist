@@ -2,7 +2,7 @@
 
 **AI-powered research hypothesis generation using LangGraph**
 
-Open Coscientist is an open **adaptation based on Google Research's [AI Co-Scientist](https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/)** research paper. This project provides an open implementation that generates, reviews, ranks, and evolves research hypotheses using the multi-agent architecture described. It orchestrates 8-10 specialized AI agents through a LangGraph workflow and aims to produce novel hypotheses grounded in scientific literature.
+Open Coscientist is an open **adaptation based on Google Research's [AI Co-Scientist](https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/)** research paper. This project provides an implementation that generates, reviews, ranks, and evolves research hypotheses using the multi-agent architecture described. It orchestrates 8-10 specialized AI agents through a LangGraph workflow and aims to produce novel hypotheses grounded in scientific literature.
 
 ## Demo
 
