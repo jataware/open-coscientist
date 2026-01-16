@@ -8,7 +8,7 @@ Open Coscientist is an open-source **adaptation based on Google Research's [AI C
 
 <p align="center">
   <a href="https://youtu.be/LyOvigZ59yE?si=JiIJnXajgLhTb1yj">
-    <img src="https://github.com/jataware/coscientist-lg/blob/open-source-rename-legal/assets/Open_Coscientist_Demo.gif?raw=true" alt="Open Coscientist Demo">
+    <img src="assets/Open_Coscientist_Demo.gif?raw=true" alt="Open Coscientist Demo">
   </a>
 </p>
 
