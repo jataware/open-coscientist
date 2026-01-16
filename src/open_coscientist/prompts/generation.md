@@ -53,3 +53,11 @@ Consider current scientific literature and knowledge in the domain.
 {{instructions}}
 
 Generate {{hypotheses_count}} diverse hypotheses that address the research goal.
+
+## Output Format
+
+**Text formatting guidelines:**
+- Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
+- Do NOT use LaTeX commands (e.g., use 'τ' not '\tau', use '≥' not '\geq')
+- Avoid decorative formatting, repeated special characters, or fancy text styling
+- Prefer concise plain text when it communicates the idea equally well

@@ -46,3 +46,9 @@ What specific areas or questions are ripe for novel hypothesis generation? Be co
 Return your synthesis as a well-structured markdown document with the sections above. Use clear headings and organize insights logically.
 
 **Important:** Do not include citations in the synthesis. The papers analyzed will be listed separately as references.
+
+**Text formatting guidelines:**
+- Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
+- Do NOT use LaTeX commands (e.g., use 'τ' not '\tau', use '≥' not '\geq')
+- Avoid decorative formatting, repeated special characters, or fancy text styling
+- Prefer concise plain text when it communicates the idea equally well

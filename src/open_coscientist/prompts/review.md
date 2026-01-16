@@ -45,3 +45,9 @@ Evaluate the hypothesis on these dimensions (score 1-10 for each):
 Provide your review in JSON format.
 
 **IMPORTANT**: Return ONLY valid, complete JSON. Ensure all strings are properly quoted and escaped, all braces and brackets are properly closed, and the response is not truncated. Do not include any text before or after the JSON.
+
+**Text formatting guidelines:**
+- Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
+- Do NOT use LaTeX commands (e.g., use 'τ' not '\tau', use '≥' not '\geq')
+- Avoid decorative formatting, repeated special characters, or fancy text styling
+- Prefer concise plain text when it communicates the idea equally well

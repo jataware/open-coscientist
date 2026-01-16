@@ -43,3 +43,11 @@ Evaluate EACH hypothesis on these dimensions (score 1-10 for each):
 ## Task
 
 Provide comprehensive comparative reviews for all hypotheses, evaluating each on the criteria above with differentiated scores.
+
+## Output Format
+
+**Text formatting guidelines:**
+- Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
+- Do NOT use LaTeX commands (e.g., use 'τ' not '\tau', use '≥' not '\geq')
+- Avoid decorative formatting, repeated special characters, or fancy text styling
+- Prefer concise plain text when it communicates the idea equally well
