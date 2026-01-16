@@ -2,11 +2,20 @@
 
 Thank you for your interest in contributing to Open Coscientist. This document provides guidelines for contributing to the project.
 
-## Table of Contents
+## Development Setup
 
-- [Code Style](#code-style)
-  - [Comment Formatting](#comment-formatting)
-  - [Logging](#logging)
+```bash
+git clone https://github.com/jataware/open-coscientist.git
+cd open-coscientist
+
+# Use your preferred virtual environment package
+python -m venv .venv
+source .venv/bin/activate
+
+pip install -e '.[dev]'
+```
+
+The rest is similar to installing from pypi- set your LLM API KEY (gemini, openai, anthrophic, etc) and then run your code.
 
 ## Code Style
 

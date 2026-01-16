@@ -30,15 +30,17 @@ For high-quality hypothesis generation, the system provides an MCP server integr
 ### Installation
 
 ```bash
-git clone https://github.com/jataware/open-coscientist.git
-cd open-coscientist
-pip install .
+pip install open-coscientist
+```
 
-# Set your API key (any LiteLLM-supported provider)
+Set your API key (any LiteLLM-supported provider):
+```bash
 export GEMINI_API_KEY="your-key-here"
 # or: export ANTHROPIC_API_KEY="your-key-here"
 # or: export OPENAI_API_KEY="your-key-here"
 ```
+
+For development, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 > **Note**: for the any literature review to run, you must provide an MCP server with literature review tools/capabilities. You can use the provided reference implementation [MCP Server](./mcp_server). Otherwise, no published research will be used.
 
