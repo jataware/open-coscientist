@@ -5,7 +5,7 @@ The MCP (Model Context Protocol) server integration is **recommended** for best 
 ## Initial Reference Literature Tools
 ### PubMed / Biomedical (Initial Scope)
 
-For our initial open-source release, we focus on the biomedical domain and provide integration with PubMed publications. This was made to:
+For our initial release, we focus on the biomedical domain and provide integration with PubMed publications. This was made to:
 - Minimize external dependencies (e.g. API keys, paid services)
 - Keep the demo and CLI experience simple
 - Align with early user interest in biomedical hypothesis generation

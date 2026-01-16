@@ -2,13 +2,13 @@
 
 **AI-powered research hypothesis generation using LangGraph**
 
-Open Coscientist is an open-source **adaptation based on Google Research's [AI Co-Scientist](https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/)** research paper. This project provides an open implementation that generates, reviews, ranks, and evolves research hypotheses using the multi-agent architecture described. It orchestrates 8-10 specialized AI agents through a LangGraph workflow and aims to produce novel hypotheses grounded in scientific literature.
+Open Coscientist is an open **adaptation based on Google Research's [AI Co-Scientist](https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/)** research paper. This project provides an implementation that generates, reviews, ranks, and evolves research hypotheses using the multi-agent architecture described. It orchestrates 8-10 specialized AI agents through a LangGraph workflow and aims to produce novel hypotheses grounded in scientific literature.
 
 ## Demo
 
 <p align="center">
   <a href="https://youtu.be/LyOvigZ59yE?si=JiIJnXajgLhTb1yj">
-    <img src="assets/Open_Coscientist_Demo.gif?raw=true" alt="Open Coscientist Demo">
+    <img src="https://github.com/jataware/open-coscientist/blob/main/assets/Open_Coscientist_Demo.gif?raw=true" alt="Open Coscientist Demo">
   </a>
 </p>
 
@@ -23,7 +23,7 @@ Open Coscientist is an open-source **adaptation based on Google Research's [AI C
 
 The engine works with any LLM and can run without external data sources.
 
-For high-quality hypothesis generation, the system provides an MCP server integration to perform literature-aware reasoning over published research. See [MCP Integration](docs/mcp-integration.md) for setup and configuration details, and to run the basic reference MCP server.
+For high-quality hypothesis generation, the system provides an MCP server integration to perform literature-aware reasoning over published research. See [MCP Integration](https://github.com/jataware/open-coscientist/blob/main/docs/mcp-integration.md) for setup and configuration details, and to run the basic reference MCP server.
 
 ## Quick Start
 
@@ -40,9 +40,9 @@ export GEMINI_API_KEY="your-key-here"
 # or: export OPENAI_API_KEY="your-key-here"
 ```
 
-For development, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For development, see [CONTRIBUTING.md](https://github.com/jataware/open-coscientist/blob/main/CONTRIBUTING.md).
 
-> **Note**: for the any literature review to run, you must provide an MCP server with literature review tools/capabilities. You can use the provided reference implementation [MCP Server](./mcp_server). Otherwise, no published research will be used.
+> **Note**: for the any literature review to run, you must provide an MCP server with literature review tools/capabilities. You can use the provided reference implementation [MCP Server](https://github.com/jataware/open-coscientist/tree/main/mcp_server). Otherwise, no published research will be used.
 
 **Model Support**: Uses [LiteLLM](https://docs.litellm.ai/docs/providers) for 100+ LLM providers (OpenAI, Anthropic, Google, Azure, AWS Bedrock, Cohere, etc.). May need to tweak some constants.py token usage and other params, such as initial hypotheses count, in order to work with less powerful models.
 
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-See [`examples/run.py`](examples/run.py) for a full example cli script with a built-in Console Reporter. **Remember**, you must run the literature review MCP server for any literature review to be included in the hypothesis generation.
+See [`examples/run.py`](https://github.com/jataware/open-coscientist/blob/main/examples/run.py) for a full example cli script with a built-in Console Reporter. **Remember**, you must run the literature review MCP server for any literature review to be included in the hypothesis generation.
 
 ## Features
 
@@ -88,12 +88,12 @@ Functional reference MCP server included in `mcp_server/` directory.
 
 ## Documentation
 
-- **[Architecture](docs/architecture.md)** - Workflow diagram, node descriptions, state management
-- **[MCP Integration](docs/mcp-integration.md)** - Literature review setup and configuration
-- **[Generation Modes](docs/generation-modes.md)** - Three generate node modes explained, and parameters to enable them
-- **[Configuration](docs/configuration.md)** - All parameters, caching, performance tuning
-- **[Logging](docs/logging.md)** - File logging, rotating logs, log levels
-- **[Development](docs/development.md)** - Contributing, node structure, testing
+- **[Architecture](https://github.com/jataware/open-coscientist/blob/main/docs/architecture.md)** - Workflow diagram, node descriptions, state management
+- **[MCP Integration](https://github.com/jataware/open-coscientist/blob/main/docs/mcp-integration.md)** - Literature review setup and configuration
+- **[Generation Modes](https://github.com/jataware/open-coscientist/blob/main/docs/generation-modes.md)** - Three generate node modes explained, and parameters to enable them
+- **[Configuration](https://github.com/jataware/open-coscientist/blob/main/docs/configuration.md)** - All parameters, caching, performance tuning
+- **[Logging](https://github.com/jataware/open-coscientist/blob/main/docs/logging.md)** - File logging, rotating logs, log levels
+- **[Development](https://github.com/jataware/open-coscientist/blob/main/docs/development.md)** - Contributing, node structure, testing
 
 ### Node Descriptions
 
@@ -111,11 +111,11 @@ Functional reference MCP server included in `mcp_server/` directory.
 | **Proximity** | Deduplication | Clusters similar hypotheses and removes high-similarity duplicates |
 
 ## Literature Review
-Our MCP server reference implementation is meant to provide a template for how to integrate literature review with Open Coscientist. It is by no means extensive and currently only supports PubMed. See [MCP Integration](docs/mcp-integration.md) for more on how to extend this reference implementation to meet your needs.
+Our MCP server reference implementation is meant to provide a template for how to integrate literature review with Open Coscientist. It is by no means extensive and currently only supports PubMed. See [MCP Integration](https://github.com/jataware/open-coscientist/blob/main/docs/mcp-integration.md) for more on how to extend this reference implementation to meet your needs.
 
 ## Attribution
 
-Open Coscientist is an open-source implementation inspired by Google Research's AI Co-Scientist. While Google's original system is closed-source, this project reimplements their multi-agent hypothesis generation architecture based on their published research paper.
+Open Coscientist is a source-available implementation inspired by Google Research's AI Co-Scientist. While Google's original system is closed-source, this project adapts their multi-agent hypothesis generation architecture from their published research paper.
 
 **Reference:**
 - **Blog**: [Accelerating scientific breakthroughs with an AI Co-Scientist](https://research.google/blog/accelerating-scientific-breakthroughs-with-an-ai-co-scientist/)

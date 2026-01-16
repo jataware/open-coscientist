@@ -4,15 +4,9 @@ Example for Open Coscientist with streaming output.
 This demonstrates hypothesis generation with literature review integration,
 showing real-time streaming of results as they're generated.
 """
-import os
-import sys
-# allow running example without installing the package
-sys.path.insert(
-    0,
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")),
-)
 from open_coscientist import HypothesisGenerator
 from open_coscientist.console import ConsoleReporter, default_progress_callback, run_console
+# install rich in your environment
 from rich.console import Console
 from rich.panel import Panel
 """
