@@ -40,8 +40,7 @@ export GEMINI_API_KEY="your-key-here"
 # or: export OPENAI_API_KEY="your-key-here"
 ```
 
-For the default literature review step to run, setup the included [Mcp Server](./mcp_server).
-Else no published research will be used.
+> **Note**: for the any literature review to run, you must provide an MCP server with literature review tools/capabilities. You can use the provided reference implementation [MCP Server](./mcp_server). Otherwise, no published research will be used.
 
 **Model Support**: Uses [LiteLLM](https://docs.litellm.ai/docs/providers) for 100+ LLM providers (OpenAI, Anthropic, Google, Azure, AWS Bedrock, Cohere, etc.). May need to tweak some constants.py token usage and other params, such as initial hypotheses count, in order to work with less powerful models.
 
@@ -71,7 +70,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-See [`examples/run.py`](examples/run.py) for a full example cli script with a built-in Console Reporter.
+See [`examples/run.py`](examples/run.py) for a full example cli script with a built-in Console Reporter. **Remember**, you must run the literature review MCP server for any literature review to be included in the hypothesis generation.
 
 ## Features
 
@@ -108,6 +107,9 @@ Functional reference MCP server included in `mcp_server/` directory.
 | **Meta-Review** | Insight synthesis | Analyzes all reviews to identify common strengths, weaknesses, and strategic directions |
 | **Evolve** | Hypothesis refinement | Refines top-k hypotheses with context awareness to preserve diversity |
 | **Proximity** | Deduplication | Clusters similar hypotheses and removes high-similarity duplicates |
+
+## Literature Review
+Our MCP server reference implementation is meant to provide a template for how to integrate literature review with Open Coscientist. It is by no means extensive and currently only supports PubMed. See [MCP Integration](docs/mcp-integration.md) for more on how to extend this reference implementation to meet your needs.
 
 ## Attribution
 

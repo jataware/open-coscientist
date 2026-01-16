@@ -102,6 +102,6 @@ The MCP server can be extended with additional tools:
 - Institutional repositories
 
 When bringing or using tools from an external MCP server, with different tool names, signatures, or completely new integrations (eg search other sources),
-you will need to modify the prompt template under prompts/, and potentially the related node code to ensure support for the tool.
+you will need to modify the prompt template under `prompts/`, and potentially the related node code to ensure support for the tool.
 
 Refer to the MCP specification for implementing custom tools: [Model Context Protocol](https://modelcontextprotocol.io)
