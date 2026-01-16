@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "open-coscientist"
-version = "0.1.0"
+version = "0.1.1"
 description = "Open LangGraph-based framework for multi-agent research hypothesis generation, adapted from Google Research's AI Co-Scientist."
 readme = "README.md"
 requires-python = ">=3.10"
