@@ -62,3 +62,9 @@ Return a JSON object with this structure:
     "overlap_explanation": "Detailed explanation of how hypothesis compares to this paper"
 }}
 ```
+
+**Text formatting guidelines:**
+- Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
+- Do NOT use LaTeX commands (e.g., use 'τ' not '\tau', use '≥' not '\geq')
+- Avoid decorative formatting, repeated special characters, or fancy text styling
+- Prefer concise plain text when it communicates the idea equally well

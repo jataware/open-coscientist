@@ -5,6 +5,7 @@ Evolve node - refine top hypotheses with context-aware evolution.
 import asyncio
 import json
 import logging
+import random
 from typing import Any, Dict, List
 
 from ..constants import (
@@ -20,6 +21,55 @@ from ..prompts import load_prompt_with_schema
 from ..state import WorkflowState
 
 logger = logging.getLogger(__name__)
+
+
+def sample_context_hypotheses(
+    all_hypotheses: List[Hypothesis],
+    exclude_hypothesis: Hypothesis,
+    max_context: int = 15
+) -> List[str]:
+    """
+    Strategically sample a subset of other hypotheses for evolution context.
+
+    To prevent token explosion with large hypothesis pools, we sample:
+    - Top 5 by Elo rating (avoid copying winners)
+    - Up to 10 random samples from the rest (diversity check)
+
+    args:
+        all_hypotheses: all hypotheses being evolved
+        exclude_hypothesis: the hypothesis being evolved (exclude from context)
+        max_context: maximum context hypotheses to include (default 15)
+
+    returns:
+        List of hypothesis texts to use as context
+    """
+    # filter out the current hypothesis
+    others = [h for h in all_hypotheses if h.text != exclude_hypothesis.text]
+
+    if len(others) <= max_context:
+        # small pool, include all
+        return [h.text for h in others]
+
+    # sort by Elo rating (descending)
+    others_sorted = sorted(others, key=lambda h: h.elo_rating, reverse=True)
+
+    # take top 5 by Elo (the best ones to avoid copying)
+    top_performers = others_sorted[:5]
+    remaining = others_sorted[5:]
+
+    # sample up to 10 more from the rest
+    sample_count = min(10, len(remaining))
+    sampled_others = random.sample(remaining, sample_count) if remaining else []
+
+    # combine: top 5 + sampled 10 = max 15
+    context_hypotheses = top_performers + sampled_others
+
+    logger.debug(
+        f"sampled {len(context_hypotheses)} context hypotheses "
+        f"(top 5 + {len(sampled_others)} random) from {len(others)} total"
+    )
+
+    return [h.text for h in context_hypotheses]
 
 
 def calculate_text_similarity(text1: str, text2: str) -> float:
@@ -58,14 +108,15 @@ async def evolve_single_hypothesis(
     supervisor_guidance: Dict[str, Any] | None = None,
 ) -> Hypothesis:
     """
-    Evolve a single hypothesis with full context to prevent convergence.
+    Evolve a single hypothesis with strategically sampled context to prevent convergence.
 
-    This is the CRITICAL anti-duplicate strategy: we pass all other hypotheses
-    being evolved so the LLM knows what to avoid.
+    This is the CRITICAL anti-duplicate strategy: we pass a subset of other hypotheses
+    (top 5 by Elo + random samples) so the LLM knows what to avoid while keeping
+    token budget manageable for large hypothesis pools.
 
     Args:
         hypothesis: Hypothesis to evolve
-        other_hypotheses_texts: Texts of ALL other hypotheses being evolved
+        other_hypotheses_texts: Strategically sampled subset of other hypotheses (max 15)
         meta_review: Meta-review insights for strategic guidance
         research_goal: Research goal for context
         model_name: LLM model to use
@@ -196,11 +247,17 @@ DO:
 
     full_prompt = prompt + diversity_instruction
 
-    # scale max_tokens for larger hypothesis sets (evolution output is proportional to input complexity)
-    # base: 8000, add 800 per additional hypothesis context beyond baseline
+    # fixed token budget since we strategically sample max 15 context hypotheses
+    # base: 8000, add 800 per context hypothesis (max 15 × 800 = 12,000)
+    # total: 8000 + 12,000 = 20,000 tokens (fixed budget for any pool size)
     scaled_max_tokens = min(
         EXTENDED_MAX_TOKENS + (len(other_hypotheses_texts) * 800),
-        16000,  # model limit for most providers
+        20000
+    )
+
+    logger.debug(
+        f"evolution token budget: {scaled_max_tokens} "
+        f"({len(other_hypotheses_texts)} context hypotheses)"
     )
 
     # Call LLM to evolve hypothesis
@@ -295,8 +352,10 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
     # Get top-k hypotheses
     top_k = hypotheses[:evolution_max_count]
 
-    # Get texts of ALL hypotheses being evolved (for context)
-    all_evolving_texts = [h.text for h in top_k]
+    logger.info(
+        f"Evolving {len(top_k)} hypotheses with strategic context sampling "
+        f"(max 15 context hypotheses per evolution)"
+    )
 
     # Get previously removed duplicates
     removed_duplicates = [
@@ -306,11 +365,16 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
     # Get supervisor guidance from state
     supervisor_guidance = state.get("supervisor_guidance")
 
-    # Evolve each hypothesis with knowledge of the others (PARALLEL)
+    # Evolve each hypothesis with strategically sampled context (PARALLEL)
+    # instead of including ALL other hypotheses, we sample a subset to control token budget
     evolution_tasks = [
         evolve_single_hypothesis(
             hypothesis=hyp,
-            other_hypotheses_texts=[t for t in all_evolving_texts if t != hyp.text],
+            other_hypotheses_texts=sample_context_hypotheses(
+                all_hypotheses=top_k,
+                exclude_hypothesis=hyp,
+                max_context=15  # cap at 15 for fixed token budget
+            ),
             meta_review=state.get("meta_review", {}),
             research_goal=state["research_goal"],
             model_name=state["model_name"],
