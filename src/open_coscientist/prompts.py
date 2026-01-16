@@ -846,6 +846,8 @@ Your response must be valid JSON matching this structure:
 }
 
 Output exactly 1 hypothesis - the most refined and promising idea from this debate.
+
+IMPORTANT: Keep your hypothesis text concise and clear. Use plain text with standard punctuation. Avoid decorative Unicode characters or special formatting symbols.
 """
         prompt = prompt + final_instructions
         return prompt, schema

@@ -65,4 +65,11 @@ Generate **{{hypotheses_count}} diverse hypotheses** based on the literature rev
 Output your hypotheses in JSON format. Provide a list of {{hypotheses_count}} hypotheses, each with:
 - A clear and concise text description
 - Brief justification explaining why it's novel and significant based on the literature.
-- Include the literature review used if creating a hypothesis based from a suggestion from lit review (either because lit review reasoning also proposed a hypotheses, or if a particular research article inspired it). No need to use any hypotheses written by lit review, but if 
+- Include the literature review used if creating a hypothesis based from a suggestion from lit review (either because lit review reasoning also proposed a hypotheses, or if a particular research article inspired it). No need to use any hypotheses written by lit review, but if
+
+**Text formatting guidelines:**
+- Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
+- Do NOT use LaTeX commands (e.g., use 'τ' not '\tau', use '≥' not '\geq')
+- Avoid decorative formatting, repeated special characters, or fancy text styling
+- If copying from literature, convert LaTeX notation to Unicode symbols or plain text
+- Prefer concise plain text when it communicates the idea equally well 

@@ -118,4 +118,11 @@ Example format (do NOT include the word "Format:" or any wrapping):
 }
 ```
 
+**Text formatting guidelines:**
+- Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
+- Do NOT use LaTeX commands (e.g., use 'τ' not '\tau', use '≥' not '\geq')
+- Avoid decorative formatting, repeated special characters, or fancy text styling
+- If copying from literature, convert LaTeX notation to Unicode symbols or plain text
+- Prefer concise plain text when it communicates the idea equally well
+
 Draft {{hypotheses_count}} diverse hypothesis ideas now. Respond with raw JSON only.

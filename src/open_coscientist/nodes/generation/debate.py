@@ -64,7 +64,8 @@ async def _run_single_debate(
         if is_final:
             # final turn: get structured JSON output with higher token limit for accumulated transcript
             # debates generate 1 hypothesis each but with longer context, so scale moderately
-            scaled_max_tokens = min(EXTENDED_MAX_TOKENS + 2000, 16000)
+            # increased buffer to handle verbose models and Unicode characters
+            scaled_max_tokens = min(EXTENDED_MAX_TOKENS + 4000, 20000)
 
             response = await call_llm_json(
                 prompt=prompt,

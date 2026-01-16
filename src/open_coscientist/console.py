@@ -6,6 +6,7 @@ Provides pretty-printed progress and results for hypothesis generation using Ric
 
 import asyncio
 import json
+import logging
 import sys
 import time
 import warnings
@@ -526,6 +527,24 @@ class ConsoleReporter:
         self.console.file.flush()
 
 
+class SSLCleanupFilter(logging.Filter):
+    """Filter out SSL transport and event loop cleanup errors from asyncio."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Return False to suppress the log record, True to allow it."""
+        if record.name == "asyncio":
+            message = record.getMessage()
+            # suppress SSL transport errors during cleanup
+            if any(pattern in message for pattern in [
+                "Fatal error on SSL transport",
+                "Bad file descriptor",
+                "Event loop is closed",
+                "SSLProtocol",
+            ]):
+                return False
+        return True
+
+
 def run_console(coro: Coroutine) -> None:
     """
     Run an async coroutine with graceful shutdown handling for console apps.
@@ -547,6 +566,11 @@ def run_console(coro: Coroutine) -> None:
     """
     # suppress RuntimeWarnings from LiteLLM's async cleanup during shutdown
     warnings.filterwarnings("ignore", category=RuntimeWarning, module="litellm")
+
+    # suppress asyncio SSL cleanup errors at the logging level
+    asyncio_logger = logging.getLogger("asyncio")
+    ssl_filter = SSLCleanupFilter()
+    asyncio_logger.addFilter(ssl_filter)
 
     # use manual event loop management for graceful shutdown
     # this prevents SSL transport errors when Ctrl+C is pressed

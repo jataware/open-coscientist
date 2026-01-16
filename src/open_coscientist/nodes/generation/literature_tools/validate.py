@@ -166,38 +166,72 @@ async def validate_hypotheses(
         hypotheses_with_analyses.append({"draft": draft, "novelty_analyses": novelty_analyses})
 
     # stage 2: synthesis - decide approve/refine/pivot for all hypotheses
-    logger.info(f"Running validation synthesis for {len(hypotheses_with_analyses)} hypotheses")
+    # process in batches to avoid token limit issues with many hypotheses
+    BATCH_SIZE = 6  # process 6 hypotheses per synthesis call
+    total_hypotheses = len(hypotheses_with_analyses)
 
-    synthesis_prompt = get_hypothesis_validation_synthesis_prompt(
-        research_goal=research_goal, hypotheses_with_analyses=hypotheses_with_analyses
-    )
+    logger.info(f"Running validation synthesis for {total_hypotheses} hypotheses in batches of {BATCH_SIZE}")
 
-    # scale token budget based on hypotheses count and analyses depth
-    # each hypothesis needs ~2500-3500 tokens for complete justification + validation
-    synthesis_max_tokens = min(EXTENDED_MAX_TOKENS + (len(hypotheses_with_analyses) * 2500), 20000)
-    logger.debug(
-        f"Synthesis token budget: {synthesis_max_tokens} for {len(hypotheses_with_analyses)} hypotheses"
-    )
+    # batch hypotheses
+    batches = []
+    for i in range(0, total_hypotheses, BATCH_SIZE):
+        batch = hypotheses_with_analyses[i:i + BATCH_SIZE]
+        batches.append(batch)
 
-    # call synthesis agent with structured JSON schema
-    try:
-        response_data = await call_llm_json(
-            prompt=synthesis_prompt,
-            model_name=state["model_name"],
-            json_schema=HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA,
-            max_tokens=synthesis_max_tokens,
-            temperature=HIGH_TEMPERATURE,
+    logger.info(f"Split into {len(batches)} batches")
+
+    # process each batch
+    async def process_synthesis_batch(batch: List[Dict[str, Any]], batch_num: int) -> List[Dict[str, Any]]:
+        """Process a single batch of hypotheses through synthesis"""
+        batch_size = len(batch)
+        logger.info(f"Processing synthesis batch {batch_num}/{len(batches)} ({batch_size} hypotheses)")
+
+        synthesis_prompt = get_hypothesis_validation_synthesis_prompt(
+            research_goal=research_goal, hypotheses_with_analyses=batch
         )
+
+        # scale token budget based on batch size
+        # each hypothesis needs ~2500-3500 tokens for complete justification + validation
+        synthesis_max_tokens = min(EXTENDED_MAX_TOKENS + (batch_size * 2500), 20000)
         logger.debug(
-            f"Validation synthesis returned {len(response_data.get('hypotheses', []))} hypotheses"
+            f"Batch {batch_num} token budget: {synthesis_max_tokens} for {batch_size} hypotheses"
         )
-    except Exception as e:
-        logger.error(f"Validation synthesis failed: {e}")
-        raise
+
+        # call synthesis agent with structured JSON schema
+        try:
+            response_data = await call_llm_json(
+                prompt=synthesis_prompt,
+                model_name=state["model_name"],
+                json_schema=HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA,
+                max_tokens=synthesis_max_tokens,
+                temperature=HIGH_TEMPERATURE,
+            )
+            logger.debug(
+                f"Batch {batch_num} synthesis returned {len(response_data.get('hypotheses', []))} hypotheses"
+            )
+            return response_data.get("hypotheses", [])
+        except Exception as e:
+            logger.error(f"Validation synthesis failed for batch {batch_num}: {e}")
+            raise
+
+    # process all batches in parallel
+    batch_tasks = [
+        process_synthesis_batch(batch, i + 1)
+        for i, batch in enumerate(batches)
+    ]
+
+    batch_results = await asyncio.gather(*batch_tasks)
+
+    # combine all validated hypotheses from batches
+    all_validated_hypotheses = []
+    for batch_hypotheses in batch_results:
+        all_validated_hypotheses.extend(batch_hypotheses)
+
+    logger.info(f"Combined {len(all_validated_hypotheses)} validated hypotheses from {len(batches)} batches")
 
     # create Hypothesis objects from synthesis
     hypotheses = []
-    for hyp_data in response_data.get("hypotheses", []):
+    for hyp_data in all_validated_hypotheses:
         hypothesis = Hypothesis(
             text=hyp_data.get("text", ""),
             justification=hyp_data.get("justification"),

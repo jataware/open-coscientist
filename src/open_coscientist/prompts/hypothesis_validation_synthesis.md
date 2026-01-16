@@ -49,3 +49,5 @@ For each hypothesis, provide:
 - When pivoting, stay related to original idea but find unexplored angle
 - Use the novelty analyses to identify gaps and opportunities
 - Prioritize hypotheses that address stated limitations or future work
+- Keep hypothesis text concise and clear - use plain text with standard punctuation
+- Avoid decorative Unicode characters or special formatting symbols in your output
