@@ -1,5 +1,5 @@
 """
-Phase 2: Validate novelty and refine/pivot draft hypotheses.
+Phase 2 on lit-tool-based generation: Validate novelty and refine/pivot draft hypotheses.
 
 This phase uses a two-stage approach:
 1. Per-hypothesis per-paper novelty analysis (parallel)
@@ -191,7 +191,7 @@ async def validate_hypotheses(
         )
 
         # scale token budget based on batch size
-        # each hypothesis needs ~2500-3500 tokens for complete justification + validation
+        # each hypothesis needs ~2500-3500 tokens for complete grounding + validation
         synthesis_max_tokens = min(EXTENDED_MAX_TOKENS + (batch_size * 2500), 20000)
         logger.debug(
             f"Batch {batch_num} token budget: {synthesis_max_tokens} for {batch_size} hypotheses"
@@ -232,10 +232,18 @@ async def validate_hypotheses(
     # create Hypothesis objects from synthesis
     hypotheses = []
     for hyp_data in all_validated_hypotheses:
+
+        hypothesis_text = hyp_data.get("hypothesis") or hyp_data.get("text", "")
+        explanation = hyp_data.get("explanation")
+        literature_grounding = hyp_data.get("literature_grounding")
+        experiment = hyp_data.get("experiment")
+
         hypothesis = Hypothesis(
-            text=hyp_data.get("text", ""),
-            justification=hyp_data.get("justification"),
-            literature_review_used=hyp_data.get("literature_review_used"),
+            text=hypothesis_text,
+            explanation=explanation,
+            literature_grounding=literature_grounding,
+            experiment=experiment,
+            # literature_review_used=hyp_data.get("literature_review_used"),
             novelty_validation=hyp_data.get("novelty_validation"),
             score=0.0,
             elo_rating=INITIAL_ELO_RATING,

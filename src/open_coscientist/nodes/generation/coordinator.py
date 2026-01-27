@@ -3,13 +3,13 @@ Generation coordinator - orchestrates all generation strategies.
 
 Decision tree:
 1. Has literature review?
-   - YES → literature_strategy + debate_strategy (parallel)
-   - NO → standard_strategy + debate_strategy (parallel)
+   - YES → debate_with_literature_strategy (parallel)
+   - NO → debate_strategy, without literature (parallel)
 
 2. Which literature strategy?
    - enable_tool_calling_generation=True + MCP → tool-based (two-phase)
-   - Otherwise → standard (pre-done review)
-   - Fallback: tool-based failure → standard
+   - Otherwise → debate with literature review (pre-done review)
+   - No lit MCP server ->  debate only
 """
 
 import asyncio

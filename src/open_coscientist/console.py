@@ -275,8 +275,9 @@ class ConsoleReporter:
             hyp_content = f"[bold]Text:[/bold]\n{hyp['text']}"
 
             # add literature reference if available
-            if hyp.get("literature_review_used"):
-                hyp_content += f"\n\n[dim]Literature Reference:[/dim]\n{hyp['literature_review_used'][:200]}..."
+            if hyp.get("literature_review_used") or hyp.get("literature_grounding"):
+                literature_reference = hyp.get("literature_review_used") or hyp.get("literature_grounding")
+                hyp_content += f"\n\n[dim]Literature Reference:[/dim]\n{literature_reference[:200]}..."
 
             self.console.print(Panel(hyp_content, border_style="cyan", expand=True))
             self.console.file.flush()

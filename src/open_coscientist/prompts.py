@@ -104,11 +104,11 @@ def get_generation_prompt(
     Get the hypothesis generation prompt and schema.
 
     If articles_with_reasoning is provided, uses the literature review prompt.
-    Otherwise, uses the standard generation prompt.
+    Otherwise, uses the debate generation prompt.
     """
     # determine which prompt to use based on whether literature review is available
     use_literature_prompt = bool(articles_with_reasoning)
-    prompt_name = "generation_with_literature_review" if use_literature_prompt else "generation"
+    prompt_name = "generation_debate_and_literature" if use_literature_prompt else "generation_after_debate"
 
     # prepare common variables for both prompts
     variables = {

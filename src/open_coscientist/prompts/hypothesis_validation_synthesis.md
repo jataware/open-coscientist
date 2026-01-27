@@ -5,6 +5,14 @@ You are validating draft hypotheses for novelty based on literature analysis.
 ## Research Goal
 {{research_goal}}
 
+## Literature Review and Analytical Rationale (pre-research done before any generation)
+
+The following represents an analysis of relevant scientific literature:
+
+#BEGIN LITERATURE REVIEW#
+{{articles_with_reasoning}}
+#END LITERATURE REVIEW#
+
 ## Draft Hypotheses with Novelty Analyses
 
 {{hypotheses_with_analyses}}
@@ -33,14 +41,6 @@ For each draft hypothesis, decide whether to **approve**, **refine**, or **pivot
 - Need to shift to related but unexplored angle
 - Pivot based on gaps/future work identified in analyses
 - Example: if "retinal imaging for AD" saturated, pivot to "retinal microvasculature fractal patterns"
-
-### Output Format
-
-For each hypothesis, provide:
-
-1. **Final hypothesis text**: approved/refined/pivoted version
-2. **Justification**: why this hypothesis is novel and significant
-3. **Novelty validation**: Includes **Decision**: approve | refine | pivot
 
 ## Guidelines
 

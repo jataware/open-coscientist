@@ -1,7 +1,8 @@
 """
 Standard generation strategy - generate hypotheses without literature review.
 
-Used when no literature review is available or as fallback.
+Used to be used when no literature review is available or as fallback.
+NOTE Won't be used anymore. Leaving as "original", standard, hypothesis generation strategy.
 """
 
 from typing import Any, Dict, List, Optional
@@ -72,8 +73,9 @@ async def generate_standard(
     for hyp_data in response.get("hypotheses", []):
         hypothesis = Hypothesis(
             text=hyp_data.get("text", ""),
-            justification=hyp_data.get("justification"),
-            literature_review_used=hyp_data.get("literature_review_used"),
+            # Justification is outdated. If this is used again, file needs to support new iterature grounding fields
+            # justification=hyp_data.get("justification"),
+            # literature_review_used=hyp_data.get("literature_review_used"),
             score=0.0,
             elo_rating=INITIAL_ELO_RATING,
             generation_method="standard",

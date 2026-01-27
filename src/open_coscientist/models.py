@@ -27,9 +27,11 @@ class Hypothesis:
     A research hypothesis with associated metadata.
 
     Attributes:
-        text: The hypothesis text
-        justification: Brief explanation of novelty, significance, and scientific rationale
-        literature_review_used: Literature review articles/references used to generate the hypothesis (if applicable)
+        text: The dense technical hypothesis formulation
+        explanation: Step-by-step layman explanation of the hypothesis
+        literature_grounding: Explicit grounding in literature review with citations
+        experiment: Practical experiment design to test the hypothesis
+        # literature_review_used: Literature review articles/references used to generate the hypothesis (if applicable)
         novelty_validation: Summary of search queries used to validate novelty and findings (tool-based generation only)
         score: Overall quality score (0-100)
         elo_rating: Elo rating from tournament selection
@@ -43,10 +45,11 @@ class Hypothesis:
         loss_count: Tournament losses
         total_matches: Total tournament matches
     """
-
     text: str
-    justification: Optional[str] = None
-    literature_review_used: Optional[str] = None
+    explanation: Optional[str] = None
+    literature_grounding: Optional[str] = None
+    experiment: Optional[str] = None
+    # literature_review_used: Optional[str] = None
     novelty_validation: Optional[str] = None
     score: float = 0.0
     elo_rating: int = 1200  # Starting Elo rating
@@ -74,9 +77,11 @@ class Hypothesis:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
-            "text": self.text,
-            "justification": self.justification,
-            "literature_review_used": self.literature_review_used,
+            "text": self.text, # Also referred to as "hypothesis" in other contexts
+            "explanation": self.explanation,
+            "literature_grounding": self.literature_grounding,
+            "experiment": self.experiment,
+            # "literature_review_used": self.literature_review_used,
             "novelty_validation": self.novelty_validation,
             "score": self.score,
             "elo_rating": self.elo_rating,

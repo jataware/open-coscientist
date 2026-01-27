@@ -102,7 +102,6 @@ async def evolve_single_hypothesis(
     hypothesis: Hypothesis,
     other_hypotheses_texts: List[str],
     meta_review: Dict[str, Any],
-    research_goal: str,
     model_name: str,
     removed_duplicates: List[str],
     supervisor_guidance: Dict[str, Any] | None = None,
@@ -118,7 +117,6 @@ async def evolve_single_hypothesis(
         hypothesis: Hypothesis to evolve
         other_hypotheses_texts: Strategically sampled subset of other hypotheses (max 15)
         meta_review: Meta-review insights for strategic guidance
-        research_goal: Research goal for context
         model_name: LLM model to use
         removed_duplicates: Previously removed duplicate texts to avoid
 
@@ -271,7 +269,11 @@ DO:
     )
 
     # Extract fields from response (match evolution.md prompt format)
-    refined_text = response.get("refined_hypothesis_text", hypothesis.text)
+    # refined_text = response.get("refined_hypothesis_text", hypothesis.text)
+    refined_text = response.get("hypothesis") or response.get("refined_hypothesis_text", hypothesis.text)
+    explanation = response.get("explanation", hypothesis.explanation)
+    literature_grounding = response.get("literature_grounding", hypothesis.literature_grounding)
+    experiment = response.get("experiment", hypothesis.experiment)
     refinement_summary = response.get("refinement_summary", "No refinement summary provided")
 
     # Check if hypothesis actually changed
@@ -301,6 +303,9 @@ DO:
     # Update hypothesis
     original_text = hypothesis.text
     hypothesis.text = refined_text
+    hypothesis.explanation = explanation
+    hypothesis.literature_grounding = literature_grounding
+    hypothesis.experiment = experiment
     hypothesis.evolution_history.append(original_text)
 
     logger.debug(f"evolved hypothesis (max similarity: {max_similarity:.2f})")

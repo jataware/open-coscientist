@@ -3,6 +3,9 @@ Standard literature generation strategy - generate hypotheses using pre-processe
 
 Uses the output from the literature review node (articles_with_reasoning)
 to generate hypotheses in a single LLM call.
+
+TODO Won't be used anymore. Leaving as "original", standard, hypothesis generation strategy.
+Algorithm should not fallback to either debate with literature review, or debate generation only.
 """
 
 import logging
@@ -81,10 +84,18 @@ async def generate_with_literature(
 
     hypotheses = []
     for hyp_data in response.get("hypotheses", []):
+
+        hypothesis_text = hyp_data.get("hypothesis") or hyp_data.get("text", "")
+        explanation = hyp_data.get("explanation")
+        literature_grounding = hyp_data.get("literature_grounding")
+        experiment = hyp_data.get("experiment")
+
         hypothesis = Hypothesis(
-            text=hyp_data.get("text", ""),
-            justification=hyp_data.get("justification"),
-            literature_review_used=hyp_data.get("literature_review_used"),
+            text=hypothesis_text,
+            explanation=explanation,
+            literature_grounding=literature_grounding,
+            experiment=experiment,
+            # literature_review_used=hyp_data.get("literature_review_used"),
             score=0.0,
             elo_rating=INITIAL_ELO_RATING,
             generation_method="literature",

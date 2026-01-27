@@ -29,7 +29,7 @@ async def _run_single_debate(
     num_turns: int = DEBATE_MAX_TURNS
 ) -> Tuple[Hypothesis, str]:
     """
-    generate a single hypothesis using multi-turn debate strategy
+    Generate a single hypothesis using multi-turn debate strategy
 
     args:
         state: current workflow state
@@ -37,7 +37,7 @@ async def _run_single_debate(
         num_turns: number of debate turns to run (default from constants)
 
     returns:
-        tuple of (single generated Hypothesis object, debate transcript string)
+        Tuple of (single generated Hypothesis object, debate transcript string)
     """
     count = 1  # each debate generates exactly 1 hypothesis
     debate_label = f"debate {debate_id}" if debate_id is not None else "debate"
@@ -81,10 +81,18 @@ async def _run_single_debate(
                 raise ValueError(f"{debate_label} failed to generate hypothesis")
 
             hyp_data = hypotheses_data[0]  # take first hypothesis
+
+            hypothesis_text = hyp_data.get("hypothesis") or hyp_data.get("text", "")
+            explanation = hyp_data.get("explanation")
+            literature_grounding = hyp_data.get("literature_grounding")
+            experiment = hyp_data.get("experiment")
+
             hypothesis = Hypothesis(
-                text=hyp_data.get("text", ""),
-                justification=hyp_data.get("justification"),
-                literature_review_used=hyp_data.get("literature_review_used"),
+                text=hypothesis_text,
+                explanation=explanation,
+                literature_grounding=literature_grounding,
+                experiment=experiment,
+                # literature_review_used=hyp_data.get("literature_review_used"),
                 score=0.0,
                 elo_rating=INITIAL_ELO_RATING,
                 generation_method="debate",
@@ -112,9 +120,9 @@ async def generate_with_debate(
     state: WorkflowState, count: int
 ) -> Tuple[List[Hypothesis], List[Dict[str, Any]]]:
     """
-    generate hypotheses using parallel debate strategy
+    Generate hypotheses using parallel debate strategy
 
-    each debate generates 1 hypothesis through multi-turn expert discussion
+    Each debate generates 1 hypothesis through multi-turn expert discussion
 
     args:
         state: current workflow state

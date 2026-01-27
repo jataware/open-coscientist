@@ -26,9 +26,11 @@ These drafts will be validated in a separate phase - focus on creative ideation 
 
 The literature review node already analyzed papers and identified key themes. Use this as **context** to understand the research landscape, then search for specific papers yourself to find gaps.
 
+#BEGIN LITERATURE REVIEW#
 ```
 {{articles_with_reasoning}}
 ```
+#END LITERATURE REVIEW#
 
 ## Pre-Curated Papers (Available for Reference)
 

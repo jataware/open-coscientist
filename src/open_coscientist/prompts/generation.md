@@ -1,3 +1,6 @@
+[MOVING TO UNUSED]
+Original "standard" generation (no debate, no lit review). Won't be used for now.
+
 # Hypothesis Generation Agent
 
 You are a Hypothesis Generation Agent in an AI Co-scientist framework.

@@ -17,12 +17,11 @@ logger = logging.getLogger(__name__)
 
 async def generate_node(state: WorkflowState) -> Dict[str, Any]:
     """
-    langgraph node for hypothesis generation
+    LangGraph node for hypothesis generation
 
-    delegates to generation coordinator which orchestrates all strategies:
-    - literature generation (standard or tool-based)
-    - debate generation
-    - standard generation (no lit review)
+    Delegates to generation coordinator which orchestrates all strategies:
+    - Literature usage (standard or tool-based)
+    - Debate generation (with or without literature review, depending on configuration and availability)
 
     args:
         state: current workflow state
