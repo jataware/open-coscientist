@@ -52,7 +52,32 @@ Example structure:
 
 Generate {{hypotheses_count}} diverse hypotheses that address the research goal.
 
+## Literature Review and Analytical Rationale
+
+The following represents an analysis of relevant scientific literature:
+
+#BEGIN LITERATURE REVIEW#
+{{articles_with_reasoning}}
+#END LITERATURE REVIEW#
+
+## IMPORTANT: Hypothesis Format
+
+Each hypothesis MUST be structured as:
+"We want to develop [specific technique/method] to enable [practical capability/outcome]."
+
+Example structure:
+"We want to develop [a causal intervention technique for attention heads] to enable [real-time debugging of reasoning errors in deployed language models]."
+
+Keep hypotheses practical and focused on what will be developed and why it's useful.
+
 ## Output Format
+
+**MANDATORY:** Explicit grounding in the literature review provided above.
+- Cite specific papers/articles from the literature review that support this hypothesis
+- Explain how findings from these papers inform or motivate the hypothesis
+- Reference specific techniques, results, or gaps identified in the literature
+- If multiple papers contributed, cite all relevant ones
+- 2-4 sentences with explicit citations
 
 **Text formatting guidelines:**
 - Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
@@ -66,13 +91,6 @@ Criteria for a high-quality, strong, hypothesis:
 Instructions:
 {{supervisor_guidance}}
 
-## Literature Review and Analytical Rationale
-
-The following represents an analysis of relevant scientific literature:
-
-#BEGIN LITERATURE REVIEW#
-{{articles_with_reasoning}}
-#END LITERATURE REVIEW#
 
 ## Procedure
 

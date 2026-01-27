@@ -106,19 +106,12 @@ The literature review node already analyzed papers and identified key themes. Us
 
 **CRITICAL**: After using tools to examine papers, respond with ONLY the raw JSON object. Do NOT wrap it in markdown code blocks (no ``` or ```json). Start your response directly with { and end with }.
 
-Example format (do NOT include the word "Format:" or any wrapping):
-```
-{
-  "drafts": [
-    {
-      "text": "hypothesis statement here",
-      "gap_reasoning": "explanation of the gap this addresses, with specific paper citations from PaperQA analysis",
-      "literature_sources": "brief mention of key papers that informed this gap (include DOIs if available)"
-    },
-    ...
-  ]
-}
-```
+**MANDATORY:** Explicit grounding in the literature review provided above.
+- Cite specific papers/articles from the literature review that support this hypothesis
+- Explain how findings from these papers inform or motivate the hypothesis
+- Reference specific techniques, results, or gaps identified in the literature
+- If multiple papers contributed, cite all relevant ones
+- 2-4 sentences with explicit citations
 
 **Text formatting guidelines:**
 - Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)

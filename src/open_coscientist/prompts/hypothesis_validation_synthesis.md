@@ -42,6 +42,17 @@ For each draft hypothesis, decide whether to **approve**, **refine**, or **pivot
 - Pivot based on gaps/future work identified in analyses
 - Example: if "retinal imaging for AD" saturated, pivot to "retinal microvasculature fractal patterns"
 
+## Output format
+
+Literature Grounding (required)
+
+**MANDATORY:** Explicit grounding in the literature review provided above.
+- Cite specific papers/articles from the literature review that support this hypothesis
+- Explain how findings from these papers inform or motivate the hypothesis
+- Reference specific techniques, results, or gaps identified in the literature
+- If multiple papers contributed, cite all relevant ones
+- 2-4 sentences with explicit citations
+
 ## Guidelines
 
 - Be honest about overlap - better to pivot than claim false novelty
