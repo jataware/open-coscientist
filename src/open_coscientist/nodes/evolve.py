@@ -105,6 +105,7 @@ async def evolve_single_hypothesis(
     model_name: str,
     removed_duplicates: List[str],
     supervisor_guidance: Dict[str, Any] | None = None,
+    articles_with_reasoning: str | None = None,
 ) -> Hypothesis:
     """
     Evolve a single hypothesis with strategically sampled context to prevent convergence.
@@ -119,6 +120,8 @@ async def evolve_single_hypothesis(
         meta_review: Meta-review insights for strategic guidance
         model_name: LLM model to use
         removed_duplicates: Previously removed duplicate texts to avoid
+        supervisor_guidance: Optional supervisor guidance for evolution phase
+        articles_with_reasoning: Optional literature review synthesis for context
 
     Returns:
         Updated hypothesis with evolved text
@@ -209,6 +212,7 @@ async def evolve_single_hypothesis(
             "review_feedback": review_feedback,
             "meta_review_insights": meta_review_insights,
             "supervisor_guidance": supervisor_guidance_text,
+            "articles_with_reasoning": articles_with_reasoning or "",
         },
     )
 
@@ -381,10 +385,10 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
                 max_context=15  # cap at 15 for fixed token budget
             ),
             meta_review=state.get("meta_review", {}),
-            research_goal=state["research_goal"],
             model_name=state["model_name"],
             removed_duplicates=removed_duplicates,
             supervisor_guidance=supervisor_guidance,
+            articles_with_reasoning=state.get("articles_with_reasoning"),
         )
         for hyp in top_k
     ]

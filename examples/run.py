@@ -50,7 +50,20 @@ async def main():
         event_stream=generator.generate_hypotheses(
             research_goal=research_goal,
             progress_callback=default_progress_callback,
-            # explicitly enable literature review/generate with tool calling
+            # Generation Strategy Options (3 conditions):
+            #
+            # Condition (a) - CURRENT: enable_literature_review_node=True + enable_tool_calling_generation=True
+            #   → 50% tool-based generation (dynamic lit search) + 50% debate-with-literature
+            #   → All hypotheses fully grounded in literature
+            #
+            # Condition (b): enable_literature_review_node=False
+            #   → 100% debate-only (no literature review) - DEGRADED MODE
+            #   → Hypotheses marked with "no literature review available" warning
+            #   → Hypothesis count reduced to max 5 for degraded mode
+            #
+            # Condition (c): enable_literature_review_node=True + enable_tool_calling_generation=False
+            #   → 100% debate-with-literature (using pre-curated papers)
+            #   → All hypotheses fully grounded in literature
             opts={
                 "enable_literature_review_node": True,
                 "enable_tool_calling_generation": True,

@@ -66,16 +66,31 @@ class FilteredStderr:
         self.original_stderr.flush()
 
 
-def get_generation_method_badge(method: str) -> str:
-    """Get a colored badge for the generation method."""
+def get_generation_method_badge(method: str, hypothesis: dict = None) -> str:
+    """
+    get a colored badge for the generation method
+
+    for debate method, checks literature_grounding to distinguish:
+    - debate-with-literature (has real literature grounding)
+    - debate-only (has degraded mode message or empty)
+    """
     if method == "debate":
+        # check if this is debate-with-literature or debate-only
+        if hypothesis:
+            lit_ground = hypothesis.get("literature_grounding", "")
+            # check if it's the degraded mode message
+            is_degraded = (
+                not lit_ground
+                or lit_ground.startswith("No literature review available")
+            )
+            if is_degraded:
+                return "[magenta][DEBATE ONLY][/magenta]"
+            else:
+                return "[magenta][DEBATE WITH LITERATURE][/magenta]"
+        # fallback if no hypothesis provided
         return "[magenta][DEBATE][/magenta]"
-    elif method == "literature":
-        return "[cyan][LITERATURE][/cyan]"
     elif method == "literature_tools":
-        return "[green][LITERATURE TOOLS][/green]"
-    elif method == "standard":
-        return "[blue][STANDARD][/blue]"
+        return "[green][LITERATURE-MCP-TOOLS][/green]"
     else:
         return ""
 
@@ -265,19 +280,26 @@ class ConsoleReporter:
             self._displayed_hypotheses[hyp_key] = hyp
 
             # get generation method badge
-            method_badge = get_generation_method_badge(hyp.get("generation_method"))
+            method_badge = get_generation_method_badge(hyp.get("generation_method"), hypothesis=hyp)
             title = f"[bold cyan]Initial Hypothesis {i}[/bold cyan] {method_badge}"
 
             self.console.print()
             self.console.rule(title)
 
-            # show hypothesis text
-            hyp_content = f"[bold]Text:[/bold]\n{hyp['text']}"
+            # build full hypothesis display with all fields
+            hyp_content = f"[bold]Hypothesis:[/bold]\n{hyp['text']}"
 
-            # add literature reference if available
-            if hyp.get("literature_review_used") or hyp.get("literature_grounding"):
-                literature_reference = hyp.get("literature_review_used") or hyp.get("literature_grounding")
-                hyp_content += f"\n\n[dim]Literature Reference:[/dim]\n{literature_reference[:200]}..."
+            # add explanation if available
+            if hyp.get("explanation"):
+                hyp_content += f"\n\n[bold]Explanation:[/bold]\n{hyp['explanation']}"
+
+            # add literature grounding if available
+            if hyp.get("literature_grounding"):
+                hyp_content += f"\n\n[bold]Literature Grounding:[/bold]\n{hyp['literature_grounding']}"
+
+            # add experiment if available
+            if hyp.get("experiment"):
+                hyp_content += f"\n\n[bold]Experiment:[/bold]\n{hyp['experiment']}"
 
             self.console.print(Panel(hyp_content, border_style="cyan", expand=True))
             self.console.file.flush()
@@ -461,7 +483,7 @@ class ConsoleReporter:
 
             for i, hyp in enumerate(sorted_final, 1):
                 # get generation method badge
-                method_badge = get_generation_method_badge(hyp.get("generation_method"))
+                method_badge = get_generation_method_badge(hyp.get("generation_method"), hypothesis=hyp)
                 title = f"[bold cyan]Final Hypothesis {i}[/bold cyan] {method_badge}"
 
                 # build stats line with tournament info
@@ -485,9 +507,29 @@ class ConsoleReporter:
 
                 self.console.print()
                 self.console.rule(title)
+
+                # build full hypothesis display with all fields
+                hyp_display = f"[bold]Hypothesis:[/bold]\n{hyp['text']}\n\n"
+
+                # add explanation if available
+                if hyp.get("explanation"):
+                    hyp_display += f"[bold]Explanation:[/bold]\n{hyp['explanation']}\n\n"
+
+                # add literature grounding if available
+                if hyp.get("literature_grounding"):
+                    lit_ground = hyp["literature_grounding"]
+                    hyp_display += f"[bold]Literature Grounding:[/bold]\n{lit_ground}\n\n"
+
+                # add experiment if available
+                if hyp.get("experiment"):
+                    hyp_display += f"[bold]Experiment:[/bold]\n{hyp['experiment']}\n\n"
+
+                # add stats line at the end
+                hyp_display += stats_line
+
                 self.console.print(
                     Panel(
-                        f"[bold]Text:[/bold]\n{hyp['text']}\n\n{stats_line}",
+                        hyp_display,
                         border_style="cyan",
                         expand=True,
                     )

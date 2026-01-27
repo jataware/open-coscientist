@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 async def _run_single_debate(
     state: WorkflowState,
     debate_id: Optional[int] = None,
-    num_turns: int = DEBATE_MAX_TURNS
+    num_turns: int = DEBATE_MAX_TURNS,
+    articles_with_reasoning: Optional[str] = None,
 ) -> Tuple[Hypothesis, str]:
     """
     Generate a single hypothesis using multi-turn debate strategy
@@ -35,6 +36,7 @@ async def _run_single_debate(
         state: current workflow state
         debate_id: id for this debate (used for tracking and identification)
         num_turns: number of debate turns to run (default from constants)
+        articles_with_reasoning: optional literature review context for debate
 
     returns:
         Tuple of (single generated Hypothesis object, debate transcript string)
@@ -59,6 +61,7 @@ async def _run_single_debate(
             preferences=preferences,
             attributes=attributes,
             is_final_turn=is_final,
+            articles_with_reasoning=articles_with_reasoning,
         )
 
         if is_final:
@@ -117,7 +120,9 @@ async def _run_single_debate(
 
 
 async def generate_with_debate(
-    state: WorkflowState, count: int
+    state: WorkflowState,
+    count: int,
+    articles_with_reasoning: Optional[str] = None,
 ) -> Tuple[List[Hypothesis], List[Dict[str, Any]]]:
     """
     Generate hypotheses using parallel debate strategy
@@ -127,6 +132,7 @@ async def generate_with_debate(
     args:
         state: current workflow state
         count: number of debates to run (= number of hypotheses to generate)
+        articles_with_reasoning: optional literature review context for debates
 
     returns:
         tuple of (debate_hypotheses, debate_transcripts)
@@ -138,7 +144,7 @@ async def generate_with_debate(
 
     # run count parallel debates, each generating 1 hypothesis
     debate_tasks = [
-        _run_single_debate(state, debate_id=i)
+        _run_single_debate(state, debate_id=i, articles_with_reasoning=articles_with_reasoning)
         for i in range(count)
     ]
 

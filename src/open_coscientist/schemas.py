@@ -20,18 +20,18 @@ GENERATION_SCHEMA: Dict[str, Any] = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "hypothesis": {"type": "string", "description": "The hypothesis text"},
+                        "hypothesis": {"type": "string", "description": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum)"},
                         "explanation": {
                             "type": "string",
-                            "description": "Technical explanation for ML researchers/DARPA PMs that reflects any refinements made. Explain mechanisms without oversimplifying",
+                            "description": "Step-by-step layman explanation breaking down the technical hypothesis (4-6 sentences)",
                         },
                         "literature_grounding": {
                             "type": "string",
-                            "description": "Explicit grounding in literature with citations; that is, connections to literature review here. If not literature review is available, this field will only point out that no literature review was available.",
+                            "description": "Explicit citations and connections to literature review with specific paper references (2-4 sentences). If not literature review is available, this field will only point out that no literature review was available.",
                         },
                         "experiment": {
                             "type": "string",
-                            "description": "Concrete experiment design with models, datasets, metrics, and validation criteria",
+                            "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
                         },
                     },
                     "required": ["hypothesis", "explanation", "literature_grounding", "experiment"],
@@ -56,14 +56,14 @@ GENERATION_DRAFT_SCHEMA: Dict[str, Any] = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "hypothesis": {"type": "string", "description": "The draft hypothesis text"},
+                        "hypothesis": {"type": "string", "description": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum)"},
                         "explanation": {
                             "type": "string",
-                            "description": "Technical explanation for ML researchers/DARPA PMs that reflects any refinements made. Explain mechanisms without oversimplifying",
+                            "description": "Step-by-step layman explanation breaking down the technical hypothesis (4-6 sentences)",
                         },
                         "experiment": {
                             "type": "string",
-                            "description": "Concrete experiment design with models, datasets, metrics, and validation criteria",
+                            "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
                         },
                         "gap_reasoning": {
                             "type": "string",
@@ -74,7 +74,7 @@ GENERATION_DRAFT_SCHEMA: Dict[str, Any] = {
                             "description": "Which pre-curated papers were examined to identify this gap (titles or key findings)",
                         },
                     },
-                    "required": ["hypothesis", "explanation", "gap_reasoning", "literature_sources"],
+                    "required": ["hypothesis", "explanation", "gap_reasoning", "literature_sources", "experiment"],
                     "additionalProperties": False,
                 },
             }
@@ -98,19 +98,19 @@ HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA: Dict[str, Any] = {
                     "properties": {
                         "hypothesis": {
                             "type": "string",
-                            "description": "final hypothesis text (approved/refined/pivoted)",
+                            "description": "Final dense technical hypothesis text, following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum) (approved/refined/pivoted)",
                         },
                         "explanation": {
                             "type": "string",
-                            "description": "Technical explanation for ML researchers/DARPA PMs that reflects any refinements made. Explain mechanisms without oversimplifying",
+                            "description": "Step-by-step layman explanation breaking down the technical hypothesis (4-6 sentences)",
                         },
                         "literature_grounding": {
                             "type": "string",
-                            "description": "Explicit grounding in literature with citations; that is, connections to literature review here. If not literature review is available, this field will only point out that no literature review was available.",
+                            "description": "Explicit citations and connections to literature review with specific paper references (2-4 sentences). If not literature review is available, this field will only point out that no literature review was available.",
                         },
                         "experiment": {
                             "type": "string",
-                            "description": "Concrete experiment design with models, datasets, metrics, and validation criteria",
+                            "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
                         },
                         "novelty_validation": {
                             "type": "object",
@@ -380,7 +380,7 @@ EVOLUTION_SCHEMA: Dict[str, Any] = {
         "properties": {
             "hypothesis": {
                 "type": "string",
-                "description": "The refined, dense technical, hypothesis formulation",
+                "description": "Refined dense technical hypothesis following 'We want to develop [X] to enable [Y]' format. 2-3 sentences",
             },
             "refinement_summary": {
                 "type": "string",
@@ -388,15 +388,15 @@ EVOLUTION_SCHEMA: Dict[str, Any] = {
             },
             "explanation": {
                 "type": "string",
-                "description": "Technical explanation for ML researchers/DARPA PMs that reflects any refinements made. Explain mechanisms without oversimplifying",
+                "description": "Updated step-by-step layman explanation reflecting any refinements made (4-6 sentences)",
             },
             "literature_grounding": {
                 "type": "string",
-                "description": "Explicit grounding in literature with citations; that is, connections to literature review here",
+                "description": "Updated explicit grounding in literature with citations (maintain or strengthen connection to research papers)",
             },
             "experiment": {
                 "type": "string",
-                "description": "Concrete experiment design with models, datasets, metrics, and validation criteria",
+                "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
             }
         },
         "required": [

@@ -762,6 +762,7 @@ def get_debate_generation_prompt(
     preferences: str | None = None,
     attributes: str | None = None,
     is_final_turn: bool = False,
+    articles_with_reasoning: str | None = None,
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
     Get the debate-based hypothesis generation prompt.
@@ -777,6 +778,7 @@ def get_debate_generation_prompt(
         preferences: Criteria for strong hypotheses
         attributes: Key attributes to prioritize
         is_final_turn: Whether this is the final turn (outputs JSON schema)
+        articles_with_reasoning: Optional literature review context for debate
 
     Returns:
         Tuple of (formatted prompt string, JSON schema dict or None)
@@ -793,6 +795,10 @@ def get_debate_generation_prompt(
             else (attributes or "testable and falsifiable")
         ),
     }
+
+    # add literature review if provided
+    if articles_with_reasoning:
+        variables["articles_with_reasoning"] = articles_with_reasoning
 
     # Format supervisor guidance if available
     if supervisor_guidance and isinstance(supervisor_guidance, dict):
@@ -824,9 +830,12 @@ def get_debate_generation_prompt(
     else:
         variables["supervisor_guidance"] = ""
 
+    # determine which prompt to use based on literature availability
+    prompt_name = "generation_debate_and_literature" if articles_with_reasoning else "generation_after_debate"
+
     # if final turn, append instruction to output JSON and use schema
     if is_final_turn:
-        prompt, schema = load_prompt_with_schema("generation_after_debate", variables)
+        prompt, schema = load_prompt_with_schema(prompt_name, variables)
 
         # append JSON output instructions for final turn
         final_instructions = """
@@ -853,7 +862,7 @@ IMPORTANT: Keep your hypothesis text concise and clear. Use plain text with stan
         return prompt, schema
     else:
         # non-final turns: no schema, just conversational
-        prompt = load_prompt("generation_after_debate", variables)
+        prompt = load_prompt(prompt_name, variables)
         return prompt, None
 
 
