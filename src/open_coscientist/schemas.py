@@ -27,7 +27,7 @@ GENERATION_SCHEMA: Dict[str, Any] = {
                         },
                         "literature_grounding": {
                             "type": "string",
-                            "description": "Explicit citations and connections to literature review with specific paper references (2-4 sentences). If not literature review is available, this field will only point out that no literature review was available.",
+                            "description": "Explicit citations in format (Author et al., year) for single citation or (Author1 et al., year; Author2 et al., year) for multiple citations. Connect specific findings to hypothesis. 2-4 sentences with citations. If no literature review is available, state that explicitly.",
                         },
                         "experiment": {
                             "type": "string",
@@ -106,7 +106,7 @@ HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA: Dict[str, Any] = {
                         },
                         "literature_grounding": {
                             "type": "string",
-                            "description": "Explicit citations and connections to literature review with specific paper references (2-4 sentences). If not literature review is available, this field will only point out that no literature review was available.",
+                            "description": "Explicit citations in format (Author et al., year) for single citation or (Author1 et al., year; Author2 et al., year) for multiple citations. Connect specific findings to hypothesis. 2-4 sentences with citations. If no literature review is available, state that explicitly.",
                         },
                         "experiment": {
                             "type": "string",
@@ -390,10 +390,6 @@ EVOLUTION_SCHEMA: Dict[str, Any] = {
                 "type": "string",
                 "description": "Updated step-by-step layman explanation reflecting any refinements made (4-6 sentences)",
             },
-            "literature_grounding": {
-                "type": "string",
-                "description": "Updated explicit grounding in literature with citations (maintain or strengthen connection to research papers)",
-            },
             "experiment": {
                 "type": "string",
                 "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
@@ -402,7 +398,6 @@ EVOLUTION_SCHEMA: Dict[str, Any] = {
         "required": [
             "hypothesis",
             "explanation",
-            "literature_grounding",
             "experiment",
             "refinement_summary",
         ],

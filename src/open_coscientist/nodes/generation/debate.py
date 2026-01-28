@@ -62,6 +62,7 @@ async def _run_single_debate(
             attributes=attributes,
             is_final_turn=is_final,
             articles_with_reasoning=articles_with_reasoning,
+            articles=state.get("articles"),
         )
 
         if is_final:

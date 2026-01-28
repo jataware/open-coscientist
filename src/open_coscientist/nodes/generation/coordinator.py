@@ -71,10 +71,15 @@ def _determine_generation_counts(
             is_dev_isolation=True,
         )
 
-    # condition (a) 
+    # condition (a)
     if has_literature and enable_tool_calling:
+        # split 50/50, but ensure we don't exceed total_count
         tools_count = max(1, total_count // 2)
-        debate_with_lit_count = max(1, total_count - tools_count)
+        debate_with_lit_count = total_count - tools_count
+        # if total_count=1, tools_count=1, debate_with_lit_count=0
+        # in this case, adjust to just use tools
+        if debate_with_lit_count == 0:
+            tools_count = total_count
         return GenerationCounts(
             tools_count=tools_count,
             debate_with_lit_count=debate_with_lit_count,

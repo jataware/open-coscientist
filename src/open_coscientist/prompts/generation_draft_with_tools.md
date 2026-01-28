@@ -30,11 +30,9 @@ The literature review node already analyzed papers and identified key themes. Us
 ```
 {{articles_with_reasoning}}
 ```
-#END LITERATURE REVIEW#
-
-## Pre-Curated Papers (Available for Reference)
-
 {{articles_metadata}}
+
+#END LITERATURE REVIEW#
 
 ## Your Task
 
@@ -52,7 +50,7 @@ The literature review node already analyzed papers and identified key themes. Us
    - Each search returns papers with metadata (title, abstract, authors, DOI)
    - Use boolean operators (AND/OR/NOT) for precise queries
    - Example: "CRISPR gene editing AND efficiency NOT bacteria"
-   - **Note**: Metadata only (abstracts), no fulltext downloads. Full PaperQA analysis is saved for validation phase
+   - **Note**: Metadata only (abstracts), no fulltext downloads.
 
 3. **Identify research gaps** - Based on literature review context and any papers you search:
    - Mechanisms that are unexplored
@@ -106,12 +104,28 @@ The literature review node already analyzed papers and identified key themes. Us
 
 **CRITICAL**: After using tools to examine papers, respond with ONLY the raw JSON object. Do NOT wrap it in markdown code blocks (no ``` or ```json). Start your response directly with { and end with }.
 
-**MANDATORY:** Explicit grounding in the literature review provided above.
-- Cite specific papers/articles from the literature review that support this hypothesis
-- Explain how findings from these papers inform or motivate the hypothesis
-- Reference specific techniques, results, or gaps identified in the literature
-- If multiple papers contributed, cite all relevant ones
-- 2-4 sentences with explicit citations
+**Output JSON structure:**
+
+```json
+{
+  "drafts": [
+    {
+      "hypothesis": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences)",
+      "explanation": "Step-by-step layman explanation (4-6 sentences)",
+      "gap_reasoning": "Brief explanation of what gap in the literature this hypothesis addresses and why it seems promising",
+      "literature_sources": "Which pre-curated papers or searches were examined to identify this gap (titles or key findings)",
+      "experiment": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)"
+    }
+  ]
+}
+```
+
+**Field requirements:**
+- `hypothesis`: Technical formulation following "We want to develop [X] to enable [Y]" format
+- `explanation`: Clear explanation for technical audiences in layman terms
+- `gap_reasoning`: What research gap this addresses and why it's promising
+- `literature_sources`: Papers/searches that informed this gap identification
+- `experiment`: Concrete, actionable experiment design to test the hypothesis
 
 **Text formatting guidelines:**
 - Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
@@ -120,4 +134,4 @@ The literature review node already analyzed papers and identified key themes. Us
 - If copying from literature, convert LaTeX notation to Unicode symbols or plain text
 - Prefer concise plain text when it communicates the idea equally well
 
-Draft {{hypotheses_count}} diverse hypothesis ideas now. Respond with raw JSON only.
+Draft {{hypotheses_count}} diverse hypothesis ideas now. Output raw JSON with "drafts" array containing objects with the 5 required fields above.

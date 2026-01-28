@@ -187,7 +187,9 @@ async def validate_hypotheses(
         logger.info(f"Processing synthesis batch {batch_num}/{len(batches)} ({batch_size} hypotheses)")
 
         synthesis_prompt = get_hypothesis_validation_synthesis_prompt(
-            research_goal=research_goal, hypotheses_with_analyses=batch
+            research_goal=research_goal,
+            hypotheses_with_analyses=batch,
+            articles=state.get("articles"),
         )
 
         # scale token budget based on batch size

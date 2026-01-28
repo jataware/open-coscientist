@@ -66,6 +66,18 @@ async def proximity_node(state: WorkflowState) -> Dict[str, Any]:
         hypotheses_for_analysis, supervisor_guidance=supervisor_guidance
     )
 
+    # save prompt to disk for debugging
+    from ..prompts import save_prompt_to_disk
+    save_prompt_to_disk(
+        run_id=state.get("run_id", "unknown"),
+        prompt_name="proximity",
+        content=prompt,
+        metadata={
+            "prompt_length_chars": len(prompt),
+            "hypotheses_count": len(hypotheses),
+        }
+    )
+
     response = await call_llm_json(
         prompt=prompt,
         model_name=state["model_name"],

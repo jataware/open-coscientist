@@ -75,6 +75,17 @@ async def supervisor_node(state: WorkflowState) -> Dict[str, Any]:
         pubmed_available=pubmed_available,
     )
 
+    # save prompt to disk for debugging
+    from ..prompts import save_prompt_to_disk
+    save_prompt_to_disk(
+        run_id=state.get("run_id", "unknown"),
+        prompt_name="supervisor",
+        content=prompt,
+        metadata={
+            "prompt_length_chars": len(prompt),
+        }
+    )
+
     response = await call_llm_json(
         prompt=prompt,
         model_name=state["model_name"],

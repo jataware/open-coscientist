@@ -106,6 +106,8 @@ async def evolve_single_hypothesis(
     removed_duplicates: List[str],
     supervisor_guidance: Dict[str, Any] | None = None,
     articles_with_reasoning: str | None = None,
+    run_id: str | None = None,
+    hypothesis_index: int | None = None,
 ) -> Hypothesis:
     """
     Evolve a single hypothesis with strategically sampled context to prevent convergence.
@@ -249,6 +251,21 @@ DO:
 
     full_prompt = prompt + diversity_instruction
 
+    # save prompt to disk for debugging
+    if run_id:
+        from ..prompts import save_prompt_to_disk
+        filename = f"evolve_{hypothesis_index}" if hypothesis_index is not None else "evolve"
+        save_prompt_to_disk(
+            run_id=run_id,
+            prompt_name=filename,
+            content=full_prompt,
+            metadata={
+                "hypothesis_index": hypothesis_index,
+                "prompt_length_chars": len(full_prompt),
+                "context_hypotheses_count": len(other_hypotheses_texts),
+            }
+        )
+
     # fixed token budget since we strategically sample max 15 context hypotheses
     # base: 8000, add 800 per context hypothesis (max 15 × 800 = 12,000)
     # total: 8000 + 12,000 = 20,000 tokens (fixed budget for any pool size)
@@ -272,13 +289,14 @@ DO:
         max_attempts=7,  # increase retries for evolution (critical node)
     )
 
-    # Extract fields from response (match evolution.md prompt format)
-    # refined_text = response.get("refined_hypothesis_text", hypothesis.text)
+    # extract fields from response (match evolution.md prompt format)
     refined_text = response.get("hypothesis") or response.get("refined_hypothesis_text", hypothesis.text)
     explanation = response.get("explanation", hypothesis.explanation)
-    literature_grounding = response.get("literature_grounding", hypothesis.literature_grounding)
     experiment = response.get("experiment", hypothesis.experiment)
-    refinement_summary = response.get("refinement_summary", "No refinement summary provided")
+    refinement_summary = response.get("refinement_summary", "no refinement summary provided")
+
+    # preserve original literature_grounding (not re-generated during evolution)
+    literature_grounding = hypothesis.literature_grounding
 
     # Check if hypothesis actually changed
     if refined_text == hypothesis.text:
@@ -389,8 +407,10 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
             removed_duplicates=removed_duplicates,
             supervisor_guidance=supervisor_guidance,
             articles_with_reasoning=state.get("articles_with_reasoning"),
+            run_id=state.get("run_id"),
+            hypothesis_index=i,
         )
-        for hyp in top_k
+        for i, hyp in enumerate(top_k)
     ]
 
     results = await asyncio.gather(*evolution_tasks)

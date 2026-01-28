@@ -4,14 +4,78 @@ Prompt loading and template substitution utilities.
 All prompts are stored as markdown files in the prompts/ directory.
 """
 
+import logging
 import re
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
 from .schemas import get_schema_for_prompt
 
+logger = logging.getLogger(__name__)
 
 _PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+
+# helper functions for saving prompts to disk
+
+def get_prompt_save_path(run_id: str, prompt_name: str) -> Path:
+    """
+    Get path for saving a filled-in prompt to disk for debugging
+
+    Ensures the output directory exists and returns the full path
+
+    args:
+        run_id: unique run identifier (from state)
+        prompt_name: descriptive name for the prompt file (e.g., "review_batch", "literature_synthesis")
+
+    returns:
+        Path object for the prompt file location
+
+    example:
+        path = get_prompt_save_path("abc123", "review_batch")
+        # returns Path(".coscientist_prompts/abc123/review_batch.txt")
+    """
+    prompts_dir = Path(".coscientist_prompts") / run_id
+    prompts_dir.mkdir(parents=True, exist_ok=True)
+
+    # ensure .txt extension
+    if not prompt_name.endswith(".txt"):
+        prompt_name = f"{prompt_name}.txt"
+
+    return prompts_dir / prompt_name
+
+
+def save_prompt_to_disk(run_id: str, prompt_name: str, content: str, metadata: Dict[str, Any] | None = None) -> bool:
+    """
+    Save a filled-in prompt to disk for debugging
+
+    args:
+        run_id: unique run identifier
+        prompt_name: descriptive name for the prompt file
+        content: the filled-in prompt content
+        metadata: optional dict of metadata to append (e.g., token counts, config)
+
+    returns:
+        True if saved successfully, False otherwise
+    """
+    try:
+        path = get_prompt_save_path(run_id, prompt_name)
+
+        with open(path, "w") as f:
+            f.write(content)
+
+            # append metadata if provided
+            if metadata:
+                f.write("\n\n=== METADATA (by save_prompt_to_disk) ===\n")
+                for key, value in metadata.items():
+                    f.write(f"{key}: {value}\n")
+
+        logger.debug(f"Saved prompt to: {path}")
+        return True
+
+    except Exception as e:
+        logger.warning(f"Failed to save prompt to disk: {e}")
+        return False
 
 
 def load_prompt(prompt_name: str, variables: Dict[str, Any] | None = None) -> str:
@@ -712,9 +776,21 @@ def get_hypothesis_novelty_analysis_prompt(
 
 
 def get_hypothesis_validation_synthesis_prompt(
-    research_goal: str, hypotheses_with_analyses: list[Dict[str, Any]]
+    research_goal: str,
+    hypotheses_with_analyses: list[Dict[str, Any]],
+    articles: List[Any] | None = None,
 ) -> str:
-    """Get the prompt for validation synthesis based on novelty analyses."""
+    """
+    Get the prompt for validation synthesis based on novelty analyses.
+
+    Args:
+        research_goal: The research goal
+        hypotheses_with_analyses: List of draft hypotheses with novelty analyses
+        articles: Optional list of Article objects for citation metadata
+
+    Returns:
+        Formatted prompt string
+    """
     # format hypotheses with their novelty analyses
     hypotheses_text = []
     for i, hyp_data in enumerate(hypotheses_with_analyses, 1):
@@ -750,7 +826,11 @@ def get_hypothesis_validation_synthesis_prompt(
 
     return load_prompt(
         "hypothesis_validation_synthesis",
-        {"research_goal": research_goal, "hypotheses_with_analyses": "\n\n".join(hypotheses_text)},
+        {
+            "research_goal": research_goal,
+            "hypotheses_with_analyses": "\n\n".join(hypotheses_text),
+            "articles_metadata": format_articles_metadata(articles or []),
+        },
     )
 
 
@@ -763,6 +843,7 @@ def get_debate_generation_prompt(
     attributes: str | None = None,
     is_final_turn: bool = False,
     articles_with_reasoning: str | None = None,
+    articles: List[Any] | None = None,
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
     Get the debate-based hypothesis generation prompt.
@@ -778,7 +859,8 @@ def get_debate_generation_prompt(
         preferences: Criteria for strong hypotheses
         attributes: Key attributes to prioritize
         is_final_turn: Whether this is the final turn (outputs JSON schema)
-        articles_with_reasoning: Optional literature review context for debate
+        articles_with_reasoning: Optional literature review synthesis for context
+        articles: Optional list of Article objects for citation metadata
 
     Returns:
         Tuple of (formatted prompt string, JSON schema dict or None)
@@ -799,6 +881,9 @@ def get_debate_generation_prompt(
     # add literature review if provided
     if articles_with_reasoning:
         variables["articles_with_reasoning"] = articles_with_reasoning
+
+    # add article metadata for citations
+    variables["articles_metadata"] = format_articles_metadata(articles or [])
 
     # Format supervisor guidance if available
     if supervisor_guidance and isinstance(supervisor_guidance, dict):

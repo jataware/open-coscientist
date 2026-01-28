@@ -261,8 +261,8 @@ class ConsoleReporter:
                 # display successful literature review
                 self.console.print(
                     Panel(
-                        lit_review[:2000] + ("..." if len(lit_review) > 2000 else ""),
-                        title="[cyan]Literature Analysis (truncated)[/cyan]",
+                        lit_review,
+                        title="[cyan]Literature Analysis[/cyan]",
                         border_style="cyan",
                         expand=False,
                     )

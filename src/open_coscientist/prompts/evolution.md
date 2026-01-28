@@ -58,27 +58,26 @@ The following represents an analysis of relevant scientific literature:
 
 ## Output Format
 
-**CRITICAL: Provide ALL FIVE components for the refined hypothesis:**
+**CRITICAL: Provide ALL FOUR components for the refined hypothesis:**
 
 Provide your refined hypothesis in JSON format with:
 
 ### 1. \[Technical\] Hypothesis (required)
 The refined dense technical formulation following "We want to develop [X] to enable [Y]" format.
 
-### 2. \[Technical\] Explanation (required)
-Updated technical explanation for ML researchers/DARPA PMs that reflects any refinements made. Explain mechanisms clearly without oversimplifying.
+### 2. Explanation (required)
+Updated step-by-step layman explanation reflecting any refinements made (4-6 sentences).
+Reflects any refinements made. Explain mechanisms clearly without oversimplifying.
 
-### 3. Literature Grounding (required when available)
-Updated explicit grounding in literature with citations (maintain or strengthen the connection to research papers).
-If there is NO literature grounding, this field should point out that no literature review was available.
-
-### 4. \[Practical\] Experiment (required)
+### 3. \[Practical\] Experiment (required)
 Updated or refined experiment design that tests the refined hypothesis. Should specify models, datasets, metrics, and validation criteria.
 
-### 5. Refinement Summary (required)
+### 4. Refinement Summary (required)
 Brief summary explaining what changes were made and why. Describe the key improvements to the hypothesis.
 
-**REMEMBER:** ALL FIVE components must be present in the refined hypothesis.
+**REMEMBER:** ALL FOUR components must be present in the refined hypothesis.
+
+**NOTE:** Literature grounding is preserved from the original hypothesis and should not be modified during evolution.
 
 **Text formatting guidelines:**
 - Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)

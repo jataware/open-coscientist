@@ -31,6 +31,8 @@ async def review_single_hypothesis(
     model_name: str,
     supervisor_guidance: Dict[str, Any] | None = None,
     meta_review: Dict[str, Any] | None = None,
+    run_id: str | None = None,
+    hypothesis_index: int | None = None,
 ) -> HypothesisReview:
     """
     Review a single hypothesis.
@@ -39,6 +41,8 @@ async def review_single_hypothesis(
         hypothesis_text: The hypothesis to review
         research_goal: The research goal for context
         model_name: LLM model to use
+        run_id: Optional run ID for saving prompts
+        hypothesis_index: Optional index for naming saved prompts
 
     Returns:
         HypothesisReview object
@@ -51,6 +55,20 @@ async def review_single_hypothesis(
         supervisor_guidance=supervisor_guidance,
         meta_review=meta_review,
     )
+
+    # save prompt to disk for debugging
+    if run_id:
+        from ..prompts import save_prompt_to_disk
+        filename = f"review_individual_{hypothesis_index}" if hypothesis_index is not None else "review_individual"
+        save_prompt_to_disk(
+            run_id=run_id,
+            prompt_name=filename,
+            content=prompt,
+            metadata={
+                "hypothesis_index": hypothesis_index,
+                "prompt_length_chars": len(prompt),
+            }
+        )
 
     response = await call_llm_json(
         prompt=prompt,
@@ -83,6 +101,7 @@ async def review_parallel_individual(
     model_name: str,
     supervisor_guidance: Dict[str, Any] | None = None,
     meta_review: Dict[str, Any] | None = None,
+    run_id: str | None = None,
 ) -> List[HypothesisReview]:
     """
     Review hypotheses in parallel (original approach).
@@ -94,6 +113,7 @@ async def review_parallel_individual(
         hypotheses: List of hypotheses to review
         research_goal: Research goal for context
         model_name: LLM model to use
+        run_id: Optional run ID for saving prompts
 
     Returns:
         List of reviews (one per hypothesis)
@@ -105,8 +125,10 @@ async def review_parallel_individual(
             model_name=model_name,
             supervisor_guidance=supervisor_guidance,
             meta_review=meta_review,
+            run_id=run_id,
+            hypothesis_index=i,
         )
-        for hyp in hypotheses
+        for i, hyp in enumerate(hypotheses)
     ]
 
     return await asyncio.gather(*review_tasks)
@@ -118,6 +140,7 @@ async def review_comparative_batch(
     model_name: str,
     supervisor_guidance: Dict[str, Any] | None = None,
     meta_review: Dict[str, Any] | None = None,
+    run_id: str | None = None,
 ) -> List[HypothesisReview]:
     """
     Review hypotheses in a single comparative batch.
@@ -129,6 +152,7 @@ async def review_comparative_batch(
         hypotheses: List of hypotheses to review
         research_goal: Research goal for context
         model_name: LLM model to use
+        run_id: Optional run ID for saving prompts
 
     Returns:
         List of reviews (one per hypothesis)
@@ -147,6 +171,22 @@ async def review_comparative_batch(
         meta_review=meta_review,
     )
 
+    # save prompt to disk for debugging
+    if run_id:
+        from ..prompts import save_prompt_to_disk
+        scaled_max_tokens = min(THINKING_MAX_TOKENS + (max(0, len(hypotheses) - 5) * 1500), 24000)
+        save_prompt_to_disk(
+            run_id=run_id,
+            prompt_name="review_batch",
+            content=prompt,
+            metadata={
+                "hypotheses_count": len(hypotheses),
+                "scaled_max_tokens": scaled_max_tokens,
+                "prompt_length_chars": len(prompt),
+            }
+        )
+        logger.debug(f"saved batch review prompt to .coscientist_prompts/{run_id}/review_batch.txt")
+
     # scale max_tokens based on hypothesis count in batch
     # base: 18000 (THINKING_MAX_TOKENS), add 1500 per hypothesis beyond 5
     hypothesis_count = len(hypotheses)
@@ -154,6 +194,8 @@ async def review_comparative_batch(
         THINKING_MAX_TOKENS + (max(0, hypothesis_count - 5) * 1500),
         24000,  # reasonable upper limit for batch review
     )
+
+    logger.debug(f"batch review: {hypothesis_count} hypotheses, max_tokens={scaled_max_tokens}")
 
     response = await call_llm_json(
         prompt=prompt,
@@ -168,13 +210,18 @@ async def review_comparative_batch(
     reviews_data = response.get("reviews", [])
 
     # debug logging
-    logger.debug(f"batch review response keys: {list(response.keys())}")
-    logger.debug(
-        f"reviews_data type: {type(reviews_data)}, length: {len(reviews_data) if isinstance(reviews_data, list) else 'N/A'}"
+    logger.info(f"Batch review response keys: {list(response.keys())}")
+    logger.info(
+        f"Reviews data type: {type(reviews_data)}, length: {len(reviews_data) if isinstance(reviews_data, list) else 'N/A'}"
     )
+    logger.info(f"Expected {len(hypotheses)} reviews, received {len(reviews_data)}")
 
     if len(reviews_data) != len(hypotheses):
-        logger.warning(f"Expected {len(hypotheses)} reviews but got {len(reviews_data)}")
+        logger.error(
+            f"MISMATCH: Expected {len(hypotheses)} reviews but got {len(reviews_data)}. "
+            f"This indicates the LLM may have hit output token limits or failed to generate all reviews. "
+            f"Check the saved prompt at .coscientist_prompts/{run_id}/review_batch.txt"
+        )
 
     # Convert to HypothesisReview objects
     reviews = []
@@ -272,6 +319,7 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
             model_name=state["model_name"],
             supervisor_guidance=supervisor_guidance,
             meta_review=meta_review,
+            run_id=state.get("run_id"),
         )
         llm_calls = 1  # Single batch call
     else:
@@ -281,6 +329,7 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
             model_name=state["model_name"],
             supervisor_guidance=supervisor_guidance,
             meta_review=meta_review,
+            run_id=state.get("run_id"),
         )
         llm_calls = num_hypotheses  # One call per hypothesis
 
