@@ -162,7 +162,7 @@ async def _emit_start_progress(state: WorkflowState, counts: GenerationCounts, t
         await progress_callback(
             "generation_start",
             {
-                "message": f"DEGRADED MODE: Generating {counts.debate_only_count} hypotheses without literature review...",
+                "message": f"Generating {counts.debate_only_count} hypotheses without literature review...",
                 "progress": PROGRESS_GENERATE_START,
                 "literature_review_available": False,
                 "degraded_mode": True,
@@ -197,7 +197,7 @@ async def _execute_generation_tasks(
         )))
 
     if counts.debate_only_count > 0:
-        logger.info(f"Running debate-only for {counts.debate_only_count} hypotheses (degraded mode)")
+        logger.info(f"Running debate-only for {counts.debate_only_count} hypotheses")
         tasks.append(("debate_only", generate_with_debate(
             state=state,
             count=counts.debate_only_count,
@@ -231,7 +231,7 @@ def _apply_degraded_mode_fallback(hypotheses: List[Hypothesis]):
     Set explicit literature_grounding message for hypotheses without literature review
     """
     for hyp in hypotheses:
-        # always overwrite in degraded mode to prevent hallucinated citations
+        # always overwrite in non-lit-mcp mode to prevent hallucinated citations
         hyp.literature_grounding = (
             "No literature review available. This hypothesis is based on the model's "
             "latent knowledge and has not been validated against current research literature. "
@@ -302,7 +302,7 @@ async def generate_hypotheses(state: WorkflowState) -> Dict[str, Any]:
 
     Implements 3-condition strategy:
     - Condition (a): lit review + tools → 50% tool-based + 50% debate-with-lit
-    - Condition (b): no lit review → 100% debate-only (degraded mode)
+    - Condition (b): no lit review → 100% debate-only
     - Condition (c): lit review but no tools → 100% debate-with-lit
 
     args:

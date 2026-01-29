@@ -245,7 +245,6 @@ async def validate_hypotheses(
             explanation=explanation,
             literature_grounding=literature_grounding,
             experiment=experiment,
-            # literature_review_used=hyp_data.get("literature_review_used"),
             novelty_validation=hyp_data.get("novelty_validation"),
             score=0.0,
             elo_rating=INITIAL_ELO_RATING,

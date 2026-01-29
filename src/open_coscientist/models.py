@@ -31,7 +31,6 @@ class Hypothesis:
         explanation: Step-by-step layman explanation of the hypothesis
         literature_grounding: Explicit grounding in literature review with citations
         experiment: Practical experiment design to test the hypothesis
-        # literature_review_used: Literature review articles/references used to generate the hypothesis (if applicable)
         novelty_validation: Summary of search queries used to validate novelty and findings (tool-based generation only)
         score: Overall quality score (0-100)
         elo_rating: Elo rating from tournament selection
@@ -49,7 +48,6 @@ class Hypothesis:
     explanation: Optional[str] = None
     literature_grounding: Optional[str] = None
     experiment: Optional[str] = None
-    # literature_review_used: Optional[str] = None
     novelty_validation: Optional[str] = None
     score: float = 0.0
     elo_rating: int = 1200  # Starting Elo rating

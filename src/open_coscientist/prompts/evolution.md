@@ -77,8 +77,6 @@ Brief summary explaining what changes were made and why. Describe the key improv
 
 **REMEMBER:** ALL FOUR components must be present in the refined hypothesis.
 
-**NOTE:** Literature grounding is preserved from the original hypothesis and should not be modified during evolution.
-
 **Text formatting guidelines:**
 - Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
 - Do NOT use LaTeX commands (e.g., use 'τ' not '\tau', use '≥' not '\geq')

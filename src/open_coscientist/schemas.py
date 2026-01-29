@@ -380,7 +380,7 @@ EVOLUTION_SCHEMA: Dict[str, Any] = {
         "properties": {
             "hypothesis": {
                 "type": "string",
-                "description": "Refined dense technical hypothesis following 'We want to develop [X] to enable [Y]' format. 2-3 sentences",
+                "description": "Refined dense technical hypothesis following 'We want to develop [X] to enable [Y]' format. Similar sentence count to original hypothesis.",
             },
             "refinement_summary": {
                 "type": "string",

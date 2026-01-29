@@ -96,7 +96,6 @@ async def _run_single_debate(
                 explanation=explanation,
                 literature_grounding=literature_grounding,
                 experiment=experiment,
-                # literature_review_used=hyp_data.get("literature_review_used"),
                 score=0.0,
                 elo_rating=INITIAL_ELO_RATING,
                 generation_method="debate",

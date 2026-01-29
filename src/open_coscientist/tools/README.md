@@ -1,3 +1,4 @@
 
-This folder is not in use. It was used to support tools within the library, which were moved to the mcp_server.
-Useful to leave in, as can be used for reference if in the future we need hybrid local tools + mcp server tools.
+The code in this folder isn't as useful, since we only use tools from mcp servers.
+It is being imported and used to instantiate a hybrid mcp + local tools registry.
+May be more useful in case we add local tools in the future.
