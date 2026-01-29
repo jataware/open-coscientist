@@ -71,7 +71,7 @@ GENERATION_DRAFT_SCHEMA: Dict[str, Any] = {
                         },
                         "literature_sources": {
                             "type": "string",
-                            "description": "Which pre-curated papers were examined to identify this gap (titles or key findings)",
+                            "description": "Specific papers from literature review that informed this gap, cited using (Author et al., year) format. Example: 'Based on findings in retinal imaging (Smith et al., 2025) and gaps identified regarding tau isoforms (Jones et al., 2024; Brown et al., 2025).'",
                         },
                     },
                     "required": ["hypothesis", "explanation", "gap_reasoning", "literature_sources", "experiment"],

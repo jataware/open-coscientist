@@ -927,21 +927,52 @@ def get_debate_generation_prompt(
 
 ## FINAL TURN - OUTPUT FORMAT
 
-This is the final turn of the debate. Based on the discussion above, output your finalized hypothesis in JSON format.
+This is the final turn of the debate. Based on the discussion above, output your finalized hypothesis in JSON format with all four required components:
 
-Your response must be valid JSON matching this structure:
+### 1. hypothesis (required)
+Dense technical description following "We want to develop [X] to enable [Y]" format (2-3 sentences).
+- Include specific technical details: algorithms, mechanisms, mathematical formulations
+- Be precise about what will be developed and the technical approach
+
+Example: "We want to develop a 'Dynamic Velocity Sentinel'—which monitors the rate of change in latent activation directions across early-to-mid layers rather than static depths—to enable anticipatory gating that triggers only when precursor signals cross a 'point of no return' for danger features."
+
+### 2. explanation (required)
+Clear explanation for technical audiences in layman terms (4-6 sentences).
+- Core problem being addressed
+- Why key mechanisms work
+- How components interact
+- Practical advantages
+
+Example: "This approach addresses the computational bottleneck by focusing on early layers where precursor signals first emerge. Rather than analyzing static magnitudes, the technique tracks velocity—the rate of change—which provides earlier detection of trajectories toward dangerous outputs. The system employs autoencoders to identify danger features, with dynamic gating that triggers only when trajectories cross a learned threshold."
+
+### 3. literature_grounding (required)
+Explicit grounding with proper citations (2-4 sentences).
+- Use (Author et al., year) format consistently
+- Connect specific findings from literature to hypothesis
+- If no literature available, state: "This hypothesis is formulated without access to a literature review."
+
+Example: "This approach builds on recent work in autoencoder analysis (Templeton et al., 2024) and circuit tracing (Conmy et al., 2023). The velocity monitoring concept addresses a gap in current methods that focus on static analysis (Marks et al., 2024)."
+
+### 4. experiment (required)
+Concrete experiment design with models, datasets, methodology, metrics, and validation (4-6 sentences).
+
+Example format: "Objective: Demonstrate that velocity monitoring achieves comparable detection with reduced cost. Models: GPT-2 Medium, pre-trained SAE layers 1-6. Datasets: AdvBench harmful prompts (500 examples), HH-RLHF benign prompts (1000 examples). Methodology: (1) Implement velocity tracking, (2) Train threshold detector, (3) Compare against baseline. Metrics: Detection accuracy, timing, false positive rate, computational overhead. Validation: Success requires >90% detection, <5% false positives, >50% cost reduction."
+
+---
+
+Output exactly 1 hypothesis as valid JSON:
 {
   "hypotheses": [
     {
-      "text": "Hypothesis text here",
-      "justification": "Brief explanation of novelty, significance, and scientific rationale"
+      "hypothesis": "...",
+      "explanation": "...",
+      "literature_grounding": "...",
+      "experiment": "..."
     }
   ]
 }
 
-Output exactly 1 hypothesis - the most refined and promising idea from this debate.
-
-IMPORTANT: Keep your hypothesis text concise and clear. Use plain text with standard punctuation. Avoid decorative Unicode characters or special formatting symbols.
+IMPORTANT: Use plain text with standard punctuation (no LaTeX, no decorative Unicode).
 """
         prompt = prompt + final_instructions
         return prompt, schema
