@@ -254,6 +254,7 @@ DO:
     # save prompt to disk for debugging
     if run_id:
         from ..prompts import save_prompt_to_disk
+
         filename = f"evolve_{hypothesis_index}" if hypothesis_index is not None else "evolve"
         save_prompt_to_disk(
             run_id=run_id,
@@ -263,16 +264,13 @@ DO:
                 "hypothesis_index": hypothesis_index,
                 "prompt_length_chars": len(full_prompt),
                 "context_hypotheses_count": len(other_hypotheses_texts),
-            }
+            },
         )
 
     # fixed token budget since we strategically sample max 15 context hypotheses
     # base: 8000, add 800 per context hypothesis (max 15 × 800 = 12,000)
     # total: 8000 + 12,000 = 20,000 tokens (fixed budget for any pool size)
-    scaled_max_tokens = min(
-        EXTENDED_MAX_TOKENS + (len(other_hypotheses_texts) * 800),
-        20000
-    )
+    scaled_max_tokens = min(EXTENDED_MAX_TOKENS + (len(other_hypotheses_texts) * 800), 20000)
 
     logger.debug(
         f"evolution token budget: {scaled_max_tokens} "
@@ -290,7 +288,9 @@ DO:
     )
 
     # extract fields from response (match evolution.md prompt format)
-    refined_text = response.get("hypothesis") or response.get("refined_hypothesis_text", hypothesis.text)
+    refined_text = response.get("hypothesis") or response.get(
+        "refined_hypothesis_text", hypothesis.text
+    )
     explanation = response.get("explanation", hypothesis.explanation)
     experiment = response.get("experiment", hypothesis.experiment)
     refinement_summary = response.get("refinement_summary", "no refinement summary provided")
@@ -400,7 +400,7 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
             other_hypotheses_texts=sample_context_hypotheses(
                 all_hypotheses=top_k,
                 exclude_hypothesis=hyp,
-                max_context=15  # cap at 15 for fixed token budget
+                max_context=15,  # cap at 15 for fixed token budget
             ),
             meta_review=state.get("meta_review", {}),
             model_name=state["model_name"],

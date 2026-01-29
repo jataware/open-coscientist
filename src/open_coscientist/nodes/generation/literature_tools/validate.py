@@ -170,21 +170,27 @@ async def validate_hypotheses(
     BATCH_SIZE = 6  # process 6 hypotheses per synthesis call
     total_hypotheses = len(hypotheses_with_analyses)
 
-    logger.info(f"Running validation synthesis for {total_hypotheses} hypotheses in batches of {BATCH_SIZE}")
+    logger.info(
+        f"Running validation synthesis for {total_hypotheses} hypotheses in batches of {BATCH_SIZE}"
+    )
 
     # batch hypotheses
     batches = []
     for i in range(0, total_hypotheses, BATCH_SIZE):
-        batch = hypotheses_with_analyses[i:i + BATCH_SIZE]
+        batch = hypotheses_with_analyses[i : i + BATCH_SIZE]
         batches.append(batch)
 
     logger.info(f"Split into {len(batches)} batches")
 
     # process each batch
-    async def process_synthesis_batch(batch: List[Dict[str, Any]], batch_num: int) -> List[Dict[str, Any]]:
+    async def process_synthesis_batch(
+        batch: List[Dict[str, Any]], batch_num: int
+    ) -> List[Dict[str, Any]]:
         """Process a single batch of hypotheses through synthesis"""
         batch_size = len(batch)
-        logger.info(f"Processing synthesis batch {batch_num}/{len(batches)} ({batch_size} hypotheses)")
+        logger.info(
+            f"Processing synthesis batch {batch_num}/{len(batches)} ({batch_size} hypotheses)"
+        )
 
         synthesis_prompt = get_hypothesis_validation_synthesis_prompt(
             research_goal=research_goal,
@@ -229,7 +235,9 @@ async def validate_hypotheses(
     for batch_hypotheses in batch_results:
         all_validated_hypotheses.extend(batch_hypotheses)
 
-    logger.info(f"Combined {len(all_validated_hypotheses)} validated hypotheses from {len(batches)} batches")
+    logger.info(
+        f"Combined {len(all_validated_hypotheses)} validated hypotheses from {len(batches)} batches"
+    )
 
     # create Hypothesis objects from synthesis
     hypotheses = []

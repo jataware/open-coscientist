@@ -59,7 +59,12 @@ async def review_single_hypothesis(
     # save prompt to disk for debugging
     if run_id:
         from ..prompts import save_prompt_to_disk
-        filename = f"review_individual_{hypothesis_index}" if hypothesis_index is not None else "review_individual"
+
+        filename = (
+            f"review_individual_{hypothesis_index}"
+            if hypothesis_index is not None
+            else "review_individual"
+        )
         save_prompt_to_disk(
             run_id=run_id,
             prompt_name=filename,
@@ -67,7 +72,7 @@ async def review_single_hypothesis(
             metadata={
                 "hypothesis_index": hypothesis_index,
                 "prompt_length_chars": len(prompt),
-            }
+            },
         )
 
     response = await call_llm_json(
@@ -158,10 +163,9 @@ async def review_comparative_batch(
         List of reviews (one per hypothesis)
     """
     # Format hypotheses for batch review
-    hypotheses_list = "\n\n".join([
-        f"**Hypothesis {i}:**\n{hyp.text}"
-        for i, hyp in enumerate(hypotheses)
-    ])
+    hypotheses_list = "\n\n".join(
+        [f"**Hypothesis {i}:**\n{hyp.text}" for i, hyp in enumerate(hypotheses)]
+    )
 
     # Call batch review
     prompt, schema = get_review_batch_prompt(
@@ -174,6 +178,7 @@ async def review_comparative_batch(
     # save prompt to disk for debugging
     if run_id:
         from ..prompts import save_prompt_to_disk
+
         scaled_max_tokens = min(THINKING_MAX_TOKENS + (max(0, len(hypotheses) - 5) * 1500), 24000)
         save_prompt_to_disk(
             run_id=run_id,
@@ -183,7 +188,7 @@ async def review_comparative_batch(
                 "hypotheses_count": len(hypotheses),
                 "scaled_max_tokens": scaled_max_tokens,
                 "prompt_length_chars": len(prompt),
-            }
+            },
         )
         logger.debug(f"saved batch review prompt to .coscientist_prompts/{run_id}/review_batch.txt")
 

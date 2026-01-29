@@ -18,6 +18,7 @@ _PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 # helper functions for saving prompts to disk
 
+
 def get_prompt_save_path(run_id: str, prompt_name: str) -> Path:
     """
     Get path for saving a filled-in prompt to disk for debugging
@@ -45,7 +46,9 @@ def get_prompt_save_path(run_id: str, prompt_name: str) -> Path:
     return prompts_dir / prompt_name
 
 
-def save_prompt_to_disk(run_id: str, prompt_name: str, content: str, metadata: Dict[str, Any] | None = None) -> bool:
+def save_prompt_to_disk(
+    run_id: str, prompt_name: str, content: str, metadata: Dict[str, Any] | None = None
+) -> bool:
     """
     Save a filled-in prompt to disk for debugging
 
@@ -172,7 +175,9 @@ def get_generation_prompt(
     """
     # determine which prompt to use based on whether literature review is available
     use_literature_prompt = bool(articles_with_reasoning)
-    prompt_name = "generation_debate_and_literature" if use_literature_prompt else "generation_after_debate"
+    prompt_name = (
+        "generation_debate_and_literature" if use_literature_prompt else "generation_after_debate"
+    )
 
     # prepare common variables for both prompts
     variables = {
@@ -916,7 +921,9 @@ def get_debate_generation_prompt(
         variables["supervisor_guidance"] = ""
 
     # determine which prompt to use based on literature availability
-    prompt_name = "generation_debate_and_literature" if articles_with_reasoning else "generation_after_debate"
+    prompt_name = (
+        "generation_debate_and_literature" if articles_with_reasoning else "generation_after_debate"
+    )
 
     # if final turn, append instruction to output JSON and use schema
     if is_final_turn:

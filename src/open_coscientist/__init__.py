@@ -35,8 +35,7 @@ import sys
 # ensure Python version compatibility
 if sys.version_info < (3, 10):
     raise RuntimeError(
-        "Open Coscientist requires Python >= 3.10. "
-        "Please upgrade to Python 3.10 or newer."
+        "Open Coscientist requires Python >= 3.10. " "Please upgrade to Python 3.10 or newer."
     )
 
 from .generator import HypothesisGenerator

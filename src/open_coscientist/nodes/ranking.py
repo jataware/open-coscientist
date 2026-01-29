@@ -136,7 +136,10 @@ async def judge_matchup(
     # save prompt to disk for debugging
     if run_id:
         from ..prompts import save_prompt_to_disk
-        filename = f"ranking_matchup_{matchup_index}" if matchup_index is not None else "ranking_matchup"
+
+        filename = (
+            f"ranking_matchup_{matchup_index}" if matchup_index is not None else "ranking_matchup"
+        )
         save_prompt_to_disk(
             run_id=run_id,
             prompt_name=filename,
@@ -146,7 +149,7 @@ async def judge_matchup(
                 "prompt_length_chars": len(prompt),
                 "has_reflection_a": bool(reflection_notes_a),
                 "has_reflection_b": bool(reflection_notes_b),
-            }
+            },
         )
 
     if reflection_notes_a or reflection_notes_b:
@@ -254,7 +257,8 @@ async def ranking_node(state: WorkflowState) -> Dict[str, Any]:
     results = await asyncio.gather(
         *[
             judge_matchup(
-                a, b,
+                a,
+                b,
                 state["research_goal"],
                 state["model_name"],
                 supervisor_guidance,

@@ -44,6 +44,7 @@ class Hypothesis:
         loss_count: Tournament losses
         total_matches: Total tournament matches
     """
+
     text: str
     explanation: Optional[str] = None
     literature_grounding: Optional[str] = None
@@ -75,7 +76,7 @@ class Hypothesis:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
-            "text": self.text, # Also referred to as "hypothesis" in other contexts
+            "text": self.text,  # Also referred to as "hypothesis" in other contexts
             "explanation": self.explanation,
             "literature_grounding": self.literature_grounding,
             "experiment": self.experiment,

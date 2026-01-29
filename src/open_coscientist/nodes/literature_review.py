@@ -430,12 +430,12 @@ async def literature_review_node(state: WorkflowState) -> Dict[str, Any]:
             try:
                 # get synthesis prompt
                 synthesis_prompt = get_literature_review_synthesis_prompt(
-                    research_goal=state['research_goal'],
-                    paper_analyses=paper_analyses
+                    research_goal=state["research_goal"], paper_analyses=paper_analyses
                 )
 
                 # save synthesis prompt to disk for debugging
                 from ..prompts import save_prompt_to_disk
+
                 save_prompt_to_disk(
                     run_id=state.get("run_id", "unknown"),
                     prompt_name="literature_review_synthesis",
@@ -443,7 +443,7 @@ async def literature_review_node(state: WorkflowState) -> Dict[str, Any]:
                     metadata={
                         "prompt_length_chars": len(synthesis_prompt),
                         "papers_analyzed": len(paper_analyses),
-                    }
+                    },
                 )
 
                 logger.info(

@@ -60,7 +60,7 @@ async def analyze_single_hypothesis(
                 "hypothesis_index": hypothesis_index,
                 "total_count": total_count,
                 "prompt_length_chars": len(prompt),
-            }
+            },
         )
 
     try:
@@ -78,10 +78,7 @@ async def analyze_single_hypothesis(
 
         logger.debug(f"hypothesis {hypothesis_index} classification: {classification}")
 
-        return {
-            "classification": classification,
-            "reasoning": reasoning
-        }
+        return {"classification": classification, "reasoning": reasoning}
 
     except Exception as e:
         logger.error(f"Reflection failed for hypothesis {hypothesis_index}: {e}")

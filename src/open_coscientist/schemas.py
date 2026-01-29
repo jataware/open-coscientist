@@ -20,7 +20,10 @@ GENERATION_SCHEMA: Dict[str, Any] = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "hypothesis": {"type": "string", "description": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum)"},
+                        "hypothesis": {
+                            "type": "string",
+                            "description": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum)",
+                        },
                         "explanation": {
                             "type": "string",
                             "description": "Step-by-step layman explanation breaking down the technical hypothesis (4-6 sentences)",
@@ -56,7 +59,10 @@ GENERATION_DRAFT_SCHEMA: Dict[str, Any] = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "hypothesis": {"type": "string", "description": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum)"},
+                        "hypothesis": {
+                            "type": "string",
+                            "description": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum)",
+                        },
                         "explanation": {
                             "type": "string",
                             "description": "Step-by-step layman explanation breaking down the technical hypothesis (4-6 sentences)",
@@ -74,7 +80,13 @@ GENERATION_DRAFT_SCHEMA: Dict[str, Any] = {
                             "description": "Specific papers from literature review that informed this gap, cited using (Author et al., year) format. Example: 'Based on findings in retinal imaging (Smith et al., 2025) and gaps identified regarding tau isoforms (Jones et al., 2024; Brown et al., 2025).'",
                         },
                     },
-                    "required": ["hypothesis", "explanation", "gap_reasoning", "literature_sources", "experiment"],
+                    "required": [
+                        "hypothesis",
+                        "explanation",
+                        "gap_reasoning",
+                        "literature_sources",
+                        "experiment",
+                    ],
                     "additionalProperties": False,
                 },
             }
@@ -125,7 +137,13 @@ HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA: Dict[str, Any] = {
                             "additionalProperties": False,
                         },
                     },
-                    "required": ["hypothesis", "explanation", "literature_grounding", "experiment", "novelty_validation"],
+                    "required": [
+                        "hypothesis",
+                        "explanation",
+                        "literature_grounding",
+                        "experiment",
+                        "novelty_validation",
+                    ],
                     "additionalProperties": False,
                 },
             }
@@ -393,7 +411,7 @@ EVOLUTION_SCHEMA: Dict[str, Any] = {
             "experiment": {
                 "type": "string",
                 "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
-            }
+            },
         },
         "required": [
             "hypothesis",
@@ -975,8 +993,6 @@ HYPOTHESIS_NOVELTY_ANALYSIS_SCHEMA: Dict[str, Any] = {
         "additionalProperties": False,
     },
 }
-
-
 
 
 def get_schema_for_prompt(prompt_name: str) -> Optional[Dict[str, Any]]:

@@ -21,10 +21,7 @@ from .validate import validate_hypotheses
 logger = logging.getLogger(__name__)
 
 
-async def generate_with_tools(
-    state: WorkflowState,
-    count: int
-) -> List[Hypothesis]:
+async def generate_with_tools(state: WorkflowState, count: int) -> List[Hypothesis]:
     """
     generate hypotheses with two-phase tool-based process (draft → validate)
 

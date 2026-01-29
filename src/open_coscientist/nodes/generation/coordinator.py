@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GenerationCounts:
     """Encapsulates hypothesis count allocation across generation methods"""
+
     tools_count: int
     debate_with_lit_count: int
     debate_only_count: int
@@ -36,6 +37,7 @@ class GenerationCounts:
 @dataclass
 class GenerationResults:
     """Encapsulates results from parallel generation execution"""
+
     tools_hypotheses: List[Hypothesis]
     debate_with_lit_hypotheses: List[Hypothesis]
     debate_only_hypotheses: List[Hypothesis]
@@ -190,19 +192,29 @@ async def _execute_generation_tasks(
 
     if counts.debate_with_lit_count > 0:
         logger.info(f"Running debate-with-literature for {counts.debate_with_lit_count} hypotheses")
-        tasks.append(("debate_lit", generate_with_debate(
-            state=state,
-            count=counts.debate_with_lit_count,
-            articles_with_reasoning=articles_with_reasoning
-        )))
+        tasks.append(
+            (
+                "debate_lit",
+                generate_with_debate(
+                    state=state,
+                    count=counts.debate_with_lit_count,
+                    articles_with_reasoning=articles_with_reasoning,
+                ),
+            )
+        )
 
     if counts.debate_only_count > 0:
         logger.info(f"Running debate-only for {counts.debate_only_count} hypotheses")
-        tasks.append(("debate_only", generate_with_debate(
-            state=state,
-            count=counts.debate_only_count,
-            articles_with_reasoning=None  # explicitly no literature
-        )))
+        tasks.append(
+            (
+                "debate_only",
+                generate_with_debate(
+                    state=state,
+                    count=counts.debate_only_count,
+                    articles_with_reasoning=None,  # explicitly no literature
+                ),
+            )
+        )
 
     # run all tasks in parallel
     results = await asyncio.gather(*[task for _, task in tasks])
@@ -241,7 +253,11 @@ def _apply_degraded_mode_fallback(hypotheses: List[Hypothesis]):
 
 def _log_generation_summary(results: GenerationResults):
     """Log summary of generated hypotheses"""
-    total = len(results.tools_hypotheses) + len(results.debate_with_lit_hypotheses) + len(results.debate_only_hypotheses)
+    total = (
+        len(results.tools_hypotheses)
+        + len(results.debate_with_lit_hypotheses)
+        + len(results.debate_only_hypotheses)
+    )
     logger.info(
         f"Generated {total} total hypotheses "
         f"({len(results.tools_hypotheses)} tool-based, {len(results.debate_with_lit_hypotheses)} debate-with-lit, "
@@ -249,11 +265,17 @@ def _log_generation_summary(results: GenerationResults):
     )
 
     if results.tools_hypotheses:
-        logger.debug(f"tool-based generation_methods: {[h.generation_method for h in results.tools_hypotheses]}")
+        logger.debug(
+            f"tool-based generation_methods: {[h.generation_method for h in results.tools_hypotheses]}"
+        )
     if results.debate_with_lit_hypotheses:
-        logger.debug(f"debate-with-Lit generation_methods: {[h.generation_method for h in results.debate_with_lit_hypotheses]}")
+        logger.debug(
+            f"debate-with-Lit generation_methods: {[h.generation_method for h in results.debate_with_lit_hypotheses]}"
+        )
     if results.debate_only_hypotheses:
-        logger.debug(f"debate-only generation_methods: {[h.generation_method for h in results.debate_only_hypotheses]}")
+        logger.debug(
+            f"debate-only generation_methods: {[h.generation_method for h in results.debate_only_hypotheses]}"
+        )
 
 
 def _build_summary_message_parts(results: GenerationResults, counts: GenerationCounts) -> List[str]:
@@ -280,7 +302,11 @@ async def _emit_complete_progress(
         return
 
     parts = _build_summary_message_parts(results, counts)
-    all_hypotheses = results.tools_hypotheses + results.debate_with_lit_hypotheses + results.debate_only_hypotheses
+    all_hypotheses = (
+        results.tools_hypotheses
+        + results.debate_with_lit_hypotheses
+        + results.debate_only_hypotheses
+    )
 
     message = f"Generated {len(all_hypotheses)} hypotheses ({', '.join(parts)})"
 
@@ -295,6 +321,7 @@ async def _emit_complete_progress(
 
 
 # main coordinator function
+
 
 async def generate_hypotheses(state: WorkflowState) -> Dict[str, Any]:
     """

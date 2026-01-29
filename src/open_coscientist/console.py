@@ -291,7 +291,9 @@ class ConsoleReporter:
                 hyp_content += f"\n\n[bold]Explanation:[/bold]\n{hyp['explanation']}"
 
             if hyp.get("literature_grounding"):
-                hyp_content += f"\n\n[bold]Literature Grounding:[/bold]\n{hyp['literature_grounding']}"
+                hyp_content += (
+                    f"\n\n[bold]Literature Grounding:[/bold]\n{hyp['literature_grounding']}"
+                )
 
             if hyp.get("experiment"):
                 hyp_content += f"\n\n[bold]Experiment:[/bold]\n{hyp['experiment']}"
@@ -474,7 +476,9 @@ class ConsoleReporter:
             )
 
             for i, hyp in enumerate(sorted_final, 1):
-                method_badge = get_generation_method_badge(hyp.get("generation_method"), hypothesis=hyp)
+                method_badge = get_generation_method_badge(
+                    hyp.get("generation_method"), hypothesis=hyp
+                )
                 title = f"[bold cyan]Final Hypothesis {i}[/bold cyan] {method_badge}"
 
                 # build stats line with tournament info
@@ -563,12 +567,15 @@ class SSLCleanupFilter(logging.Filter):
         if record.name == "asyncio":
             message = record.getMessage()
             # suppress SSL transport errors during cleanup
-            if any(pattern in message for pattern in [
-                "Fatal error on SSL transport",
-                "Bad file descriptor",
-                "Event loop is closed",
-                "SSLProtocol",
-            ]):
+            if any(
+                pattern in message
+                for pattern in [
+                    "Fatal error on SSL transport",
+                    "Bad file descriptor",
+                    "Event loop is closed",
+                    "SSLProtocol",
+                ]
+            ):
                 return False
         return True
 
