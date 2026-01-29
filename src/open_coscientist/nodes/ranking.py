@@ -57,6 +57,8 @@ async def judge_matchup(
     research_goal: str,
     model_name: str,
     supervisor_guidance: Dict[str, Any] | None = None,
+    run_id: str | None = None,
+    matchup_index: int | None = None,
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Have LLM judge which hypothesis is superior.
@@ -130,6 +132,25 @@ async def judge_matchup(
         reflection_notes_a=reflection_notes_a,
         reflection_notes_b=reflection_notes_b,
     )
+
+    # save prompt to disk for debugging
+    if run_id:
+        from ..prompts import save_prompt_to_disk
+
+        filename = (
+            f"ranking_matchup_{matchup_index}" if matchup_index is not None else "ranking_matchup"
+        )
+        save_prompt_to_disk(
+            run_id=run_id,
+            prompt_name=filename,
+            content=prompt,
+            metadata={
+                "matchup_index": matchup_index,
+                "prompt_length_chars": len(prompt),
+                "has_reflection_a": bool(reflection_notes_a),
+                "has_reflection_b": bool(reflection_notes_b),
+            },
+        )
 
     if reflection_notes_a or reflection_notes_b:
         if "Reflection Notes" in prompt:
@@ -235,8 +256,16 @@ async def ranking_node(state: WorkflowState) -> Dict[str, Any]:
     pairings = [tuple(random.sample(hypotheses, 2)) for _ in range(tournament_rounds)]
     results = await asyncio.gather(
         *[
-            judge_matchup(a, b, state["research_goal"], state["model_name"], supervisor_guidance)
-            for a, b in pairings
+            judge_matchup(
+                a,
+                b,
+                state["research_goal"],
+                state["model_name"],
+                supervisor_guidance,
+                run_id=state.get("run_id"),
+                matchup_index=i,
+            )
+            for i, (a, b) in enumerate(pairings)
         ]
     )
 

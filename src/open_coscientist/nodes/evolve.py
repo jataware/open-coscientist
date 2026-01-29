@@ -102,10 +102,12 @@ async def evolve_single_hypothesis(
     hypothesis: Hypothesis,
     other_hypotheses_texts: List[str],
     meta_review: Dict[str, Any],
-    research_goal: str,
     model_name: str,
     removed_duplicates: List[str],
     supervisor_guidance: Dict[str, Any] | None = None,
+    articles_with_reasoning: str | None = None,
+    run_id: str | None = None,
+    hypothesis_index: int | None = None,
 ) -> Hypothesis:
     """
     Evolve a single hypothesis with strategically sampled context to prevent convergence.
@@ -118,9 +120,10 @@ async def evolve_single_hypothesis(
         hypothesis: Hypothesis to evolve
         other_hypotheses_texts: Strategically sampled subset of other hypotheses (max 15)
         meta_review: Meta-review insights for strategic guidance
-        research_goal: Research goal for context
         model_name: LLM model to use
         removed_duplicates: Previously removed duplicate texts to avoid
+        supervisor_guidance: Optional supervisor guidance for evolution phase
+        articles_with_reasoning: Optional literature review synthesis for context
 
     Returns:
         Updated hypothesis with evolved text
@@ -211,6 +214,7 @@ async def evolve_single_hypothesis(
             "review_feedback": review_feedback,
             "meta_review_insights": meta_review_insights,
             "supervisor_guidance": supervisor_guidance_text,
+            "articles_with_reasoning": articles_with_reasoning or "",
         },
     )
 
@@ -247,13 +251,26 @@ DO:
 
     full_prompt = prompt + diversity_instruction
 
+    # save prompt to disk for debugging
+    if run_id:
+        from ..prompts import save_prompt_to_disk
+
+        filename = f"evolve_{hypothesis_index}" if hypothesis_index is not None else "evolve"
+        save_prompt_to_disk(
+            run_id=run_id,
+            prompt_name=filename,
+            content=full_prompt,
+            metadata={
+                "hypothesis_index": hypothesis_index,
+                "prompt_length_chars": len(full_prompt),
+                "context_hypotheses_count": len(other_hypotheses_texts),
+            },
+        )
+
     # fixed token budget since we strategically sample max 15 context hypotheses
     # base: 8000, add 800 per context hypothesis (max 15 × 800 = 12,000)
     # total: 8000 + 12,000 = 20,000 tokens (fixed budget for any pool size)
-    scaled_max_tokens = min(
-        EXTENDED_MAX_TOKENS + (len(other_hypotheses_texts) * 800),
-        20000
-    )
+    scaled_max_tokens = min(EXTENDED_MAX_TOKENS + (len(other_hypotheses_texts) * 800), 20000)
 
     logger.debug(
         f"evolution token budget: {scaled_max_tokens} "
@@ -270,9 +287,16 @@ DO:
         max_attempts=7,  # increase retries for evolution (critical node)
     )
 
-    # Extract fields from response (match evolution.md prompt format)
-    refined_text = response.get("refined_hypothesis_text", hypothesis.text)
-    refinement_summary = response.get("refinement_summary", "No refinement summary provided")
+    # extract fields from response (match evolution.md prompt format)
+    refined_text = response.get("hypothesis") or response.get(
+        "refined_hypothesis_text", hypothesis.text
+    )
+    explanation = response.get("explanation", hypothesis.explanation)
+    experiment = response.get("experiment", hypothesis.experiment)
+    refinement_summary = response.get("refinement_summary", "no refinement summary provided")
+
+    # preserve original literature_grounding (not re-generated during evolution)
+    literature_grounding = hypothesis.literature_grounding
 
     # Check if hypothesis actually changed
     if refined_text == hypothesis.text:
@@ -301,6 +325,9 @@ DO:
     # Update hypothesis
     original_text = hypothesis.text
     hypothesis.text = refined_text
+    hypothesis.explanation = explanation
+    hypothesis.literature_grounding = literature_grounding
+    hypothesis.experiment = experiment
     hypothesis.evolution_history.append(original_text)
 
     logger.debug(f"evolved hypothesis (max similarity: {max_similarity:.2f})")
@@ -373,15 +400,17 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
             other_hypotheses_texts=sample_context_hypotheses(
                 all_hypotheses=top_k,
                 exclude_hypothesis=hyp,
-                max_context=15  # cap at 15 for fixed token budget
+                max_context=15,  # cap at 15 for fixed token budget
             ),
             meta_review=state.get("meta_review", {}),
-            research_goal=state["research_goal"],
             model_name=state["model_name"],
             removed_duplicates=removed_duplicates,
             supervisor_guidance=supervisor_guidance,
+            articles_with_reasoning=state.get("articles_with_reasoning"),
+            run_id=state.get("run_id"),
+            hypothesis_index=i,
         )
-        for hyp in top_k
+        for i, hyp in enumerate(top_k)
     ]
 
     results = await asyncio.gather(*evolution_tasks)

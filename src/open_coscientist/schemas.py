@@ -20,17 +20,24 @@ GENERATION_SCHEMA: Dict[str, Any] = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "text": {"type": "string", "description": "The hypothesis text"},
-                        "justification": {
+                        "hypothesis": {
                             "type": "string",
-                            "description": "Brief explanation of novelty, significance, and scientific rationale",
+                            "description": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum)",
                         },
-                        "literature_review_used": {
+                        "explanation": {
                             "type": "string",
-                            "description": "Succinct sharing of the literature review articles, references, or other aspects used to generate the hypothesis. REQUIRED only when literature review context was provided in the prompt. OMIT this field entirely if no literature review was available or used. Do not include this field if generating hypotheses without literature review context.",
+                            "description": "Step-by-step layman explanation breaking down the technical hypothesis (4-6 sentences)",
+                        },
+                        "literature_grounding": {
+                            "type": "string",
+                            "description": "Explicit citations in format (Author et al., year) for single citation or (Author1 et al., year; Author2 et al., year) for multiple citations. Connect specific findings to hypothesis. 2-4 sentences with citations. If no literature review is available, state that explicitly.",
+                        },
+                        "experiment": {
+                            "type": "string",
+                            "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
                         },
                     },
-                    "required": ["text", "justification"],
+                    "required": ["hypothesis", "explanation", "literature_grounding", "experiment"],
                     "additionalProperties": False,
                 },
             }
@@ -39,7 +46,6 @@ GENERATION_SCHEMA: Dict[str, Any] = {
         "additionalProperties": False,
     },
 }
-
 
 # Generation draft schema (Phase 1: drafting without validation)
 GENERATION_DRAFT_SCHEMA: Dict[str, Any] = {
@@ -53,22 +59,96 @@ GENERATION_DRAFT_SCHEMA: Dict[str, Any] = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "text": {"type": "string", "description": "The draft hypothesis text"},
+                        "hypothesis": {
+                            "type": "string",
+                            "description": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum)",
+                        },
+                        "explanation": {
+                            "type": "string",
+                            "description": "Step-by-step layman explanation breaking down the technical hypothesis (4-6 sentences)",
+                        },
+                        "experiment": {
+                            "type": "string",
+                            "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
+                        },
                         "gap_reasoning": {
                             "type": "string",
                             "description": "Brief explanation of what gap in the literature this hypothesis addresses and why it seems promising",
                         },
                         "literature_sources": {
                             "type": "string",
-                            "description": "Which pre-curated papers were examined to identify this gap (titles or key findings)",
+                            "description": "Specific papers from literature review that informed this gap, cited using (Author et al., year) format. Example: 'Based on findings in retinal imaging (Smith et al., 2025) and gaps identified regarding tau isoforms (Jones et al., 2024; Brown et al., 2025).'",
                         },
                     },
-                    "required": ["text", "gap_reasoning", "literature_sources"],
+                    "required": [
+                        "hypothesis",
+                        "explanation",
+                        "gap_reasoning",
+                        "literature_sources",
+                        "experiment",
+                    ],
                     "additionalProperties": False,
                 },
             }
         },
         "required": ["drafts"],
+        "additionalProperties": False,
+    },
+}
+
+# Hypothesis validation synthesis schema (Phase 2)
+HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA: Dict[str, Any] = {
+    "name": "hypothesis_validation_synthesis",
+    "strict": False,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "hypotheses": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "hypothesis": {
+                            "type": "string",
+                            "description": "Final dense technical hypothesis text, following 'We want to develop [X] to enable [Y]' format (2-3 sentences maximum) (approved/refined/pivoted)",
+                        },
+                        "explanation": {
+                            "type": "string",
+                            "description": "Step-by-step layman explanation breaking down the technical hypothesis (4-6 sentences)",
+                        },
+                        "literature_grounding": {
+                            "type": "string",
+                            "description": "Explicit citations in format (Author et al., year) for single citation or (Author1 et al., year; Author2 et al., year) for multiple citations. Connect specific findings to hypothesis. 2-4 sentences with citations. If no literature review is available, state that explicitly.",
+                        },
+                        "experiment": {
+                            "type": "string",
+                            "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
+                        },
+                        "novelty_validation": {
+                            "type": "object",
+                            "properties": {
+                                "decision": {
+                                    "type": "string",
+                                    "description": "validation decision",
+                                    "enum": ["approved", "refined", "pivoted"],
+                                }
+                            },
+                            "required": ["decision"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "required": [
+                        "hypothesis",
+                        "explanation",
+                        "literature_grounding",
+                        "experiment",
+                        "novelty_validation",
+                    ],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["hypotheses"],
         "additionalProperties": False,
     },
 }
@@ -316,28 +396,28 @@ EVOLUTION_SCHEMA: Dict[str, Any] = {
     "schema": {
         "type": "object",
         "properties": {
-            "original_hypothesis_text": {
+            "hypothesis": {
                 "type": "string",
-                "description": "The original hypothesis text",
-            },
-            "refined_hypothesis_text": {
-                "type": "string",
-                "description": "The refined hypothesis text",
+                "description": "Refined dense technical hypothesis following 'We want to develop [X] to enable [Y]' format. Similar sentence count to original hypothesis.",
             },
             "refinement_summary": {
                 "type": "string",
-                "description": "Summary of changes and improvements",
+                "description": "Summary of changes and improvements made during evolution.",
             },
-            "diversity_preserved": {
-                "type": "boolean",
-                "description": "Whether the unique core concept was preserved",
+            "explanation": {
+                "type": "string",
+                "description": "Updated step-by-step layman explanation reflecting any refinements made (4-6 sentences)",
+            },
+            "experiment": {
+                "type": "string",
+                "description": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)",
             },
         },
         "required": [
-            "original_hypothesis_text",
-            "refined_hypothesis_text",
+            "hypothesis",
+            "explanation",
+            "experiment",
             "refinement_summary",
-            "diversity_preserved",
         ],
         "additionalProperties": False,
     },
@@ -551,50 +631,6 @@ REFLECTION_SCHEMA: Dict[str, Any] = {
             },
         },
         "required": ["hypothesis_text", "reasoning", "classification"],
-        "additionalProperties": False,
-    },
-}
-
-
-# pdf analysis schema for subagent processing
-PDF_ANALYSIS_SCHEMA: Dict[str, Any] = {
-    "name": "pdf_analysis",
-    "strict": False,
-    "schema": {
-        "type": "object",
-        "properties": {
-            "key_findings": {
-                "type": "array",
-                "description": "main findings and conclusions from the paper",
-                "items": {"type": "string"},
-            },
-            "methodologies": {
-                "type": "array",
-                "description": "research methods, datasets, experimental approaches used",
-                "items": {"type": "string"},
-            },
-            "limitations": {
-                "type": "array",
-                "description": "limitations, gaps, or challenges identified by authors",
-                "items": {"type": "string"},
-            },
-            "future_work": {
-                "type": "array",
-                "description": "future research directions or open problems mentioned",
-                "items": {"type": "string"},
-            },
-            "relevance_to_research_goal": {
-                "type": "string",
-                "description": "how this paper relates to the research goal and what insights it provides",
-            },
-        },
-        "required": [
-            "key_findings",
-            "methodologies",
-            "limitations",
-            "future_work",
-            "relevance_to_research_goal",
-        ],
         "additionalProperties": False,
     },
 }
@@ -915,50 +951,6 @@ HYPOTHESIS_NOVELTY_ANALYSIS_SCHEMA: Dict[str, Any] = {
 }
 
 
-# Hypothesis validation synthesis schema
-HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA: Dict[str, Any] = {
-    "name": "hypothesis_validation_synthesis",
-    "strict": False,
-    "schema": {
-        "type": "object",
-        "properties": {
-            "hypotheses": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "text": {
-                            "type": "string",
-                            "description": "final hypothesis text (approved/refined/pivoted)",
-                        },
-                        "justification": {
-                            "type": "string",
-                            "description": "why this hypothesis is significant",
-                        },
-                        "novelty_validation": {
-                            "type": "object",
-                            "properties": {
-                                "decision": {
-                                    "type": "string",
-                                    "description": "validation decision",
-                                    "enum": ["approved", "refined", "pivoted"],
-                                }
-                            },
-                            "required": ["decision"],
-                            "additionalProperties": False,
-                        },
-                    },
-                    "required": ["text", "justification", "novelty_validation"],
-                    "additionalProperties": False,
-                },
-            }
-        },
-        "required": ["hypotheses"],
-        "additionalProperties": False,
-    },
-}
-
-
 def get_schema_for_prompt(prompt_name: str) -> Optional[Dict[str, Any]]:
     """
     Get the JSON schema for a given prompt name.
@@ -970,9 +962,8 @@ def get_schema_for_prompt(prompt_name: str) -> Optional[Dict[str, Any]]:
         JSON schema dict or None if no schema is defined for this prompt
     """
     schema_map = {
-        "generation": GENERATION_SCHEMA,
-        "generation_with_literature_review": GENERATION_SCHEMA,
         "generation_draft_with_tools": GENERATION_DRAFT_SCHEMA,
+        "generation_debate_and_literature": GENERATION_SCHEMA,
         "generation_after_debate": GENERATION_SCHEMA,
         "review": REVIEW_SCHEMA,
         "review_batch": REVIEW_BATCH_SCHEMA,
@@ -981,7 +972,6 @@ def get_schema_for_prompt(prompt_name: str) -> Optional[Dict[str, Any]]:
         "ranking": RANKING_SCHEMA,
         "proximity": PROXIMITY_SCHEMA,
         "reflection_observations": REFLECTION_SCHEMA,
-        "pdf_analysis": PDF_ANALYSIS_SCHEMA,
         "supervisor": SUPERVISOR_SCHEMA,
         "literature_query_generation": LITERATURE_QUERY_SCHEMA,
         "literature_review_paper_analysis": LITERATURE_PAPER_ANALYSIS_SCHEMA,

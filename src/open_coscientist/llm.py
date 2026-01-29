@@ -257,8 +257,7 @@ async def call_llm(
     # Check cache first
     cache = get_cache()
     cached_response = cache.get(
-        prompt, model_name, temperature, max_tokens,
-        json_schema=json_schema, force_json=force_json
+        prompt, model_name, temperature, max_tokens, json_schema=json_schema, force_json=force_json
     )
     if cached_response is not None:
         logger.debug("using cached llm response")
@@ -456,8 +455,7 @@ async def call_llm_json(
             if parse_error is not None:
                 # Attempt repairs (minor only unless final attempt)
                 result, was_major_repair = attempt_json_repair(
-                    response_text,
-                    allow_major_repairs=is_final_attempt
+                    response_text, allow_major_repairs=is_final_attempt
                 )
 
                 if result is not None:

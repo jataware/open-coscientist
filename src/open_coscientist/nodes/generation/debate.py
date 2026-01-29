@@ -26,18 +26,20 @@ logger = logging.getLogger(__name__)
 async def _run_single_debate(
     state: WorkflowState,
     debate_id: Optional[int] = None,
-    num_turns: int = DEBATE_MAX_TURNS
+    num_turns: int = DEBATE_MAX_TURNS,
+    articles_with_reasoning: Optional[str] = None,
 ) -> Tuple[Hypothesis, str]:
     """
-    generate a single hypothesis using multi-turn debate strategy
+    Generate a single hypothesis using multi-turn debate strategy
 
     args:
         state: current workflow state
         debate_id: id for this debate (used for tracking and identification)
         num_turns: number of debate turns to run (default from constants)
+        articles_with_reasoning: optional literature review context for debate
 
     returns:
-        tuple of (single generated Hypothesis object, debate transcript string)
+        Tuple of (single generated Hypothesis object, debate transcript string)
     """
     count = 1  # each debate generates exactly 1 hypothesis
     debate_label = f"debate {debate_id}" if debate_id is not None else "debate"
@@ -59,6 +61,8 @@ async def _run_single_debate(
             preferences=preferences,
             attributes=attributes,
             is_final_turn=is_final,
+            articles_with_reasoning=articles_with_reasoning,
+            articles=state.get("articles"),
         )
 
         if is_final:
@@ -81,10 +85,17 @@ async def _run_single_debate(
                 raise ValueError(f"{debate_label} failed to generate hypothesis")
 
             hyp_data = hypotheses_data[0]  # take first hypothesis
+
+            hypothesis_text = hyp_data.get("hypothesis") or hyp_data.get("text", "")
+            explanation = hyp_data.get("explanation")
+            literature_grounding = hyp_data.get("literature_grounding")
+            experiment = hyp_data.get("experiment")
+
             hypothesis = Hypothesis(
-                text=hyp_data.get("text", ""),
-                justification=hyp_data.get("justification"),
-                literature_review_used=hyp_data.get("literature_review_used"),
+                text=hypothesis_text,
+                explanation=explanation,
+                literature_grounding=literature_grounding,
+                experiment=experiment,
                 score=0.0,
                 elo_rating=INITIAL_ELO_RATING,
                 generation_method="debate",
@@ -109,16 +120,19 @@ async def _run_single_debate(
 
 
 async def generate_with_debate(
-    state: WorkflowState, count: int
+    state: WorkflowState,
+    count: int,
+    articles_with_reasoning: Optional[str] = None,
 ) -> Tuple[List[Hypothesis], List[Dict[str, Any]]]:
     """
-    generate hypotheses using parallel debate strategy
+    Generate hypotheses using parallel debate strategy
 
-    each debate generates 1 hypothesis through multi-turn expert discussion
+    Each debate generates 1 hypothesis through multi-turn expert discussion
 
     args:
         state: current workflow state
         count: number of debates to run (= number of hypotheses to generate)
+        articles_with_reasoning: optional literature review context for debates
 
     returns:
         tuple of (debate_hypotheses, debate_transcripts)
@@ -130,7 +144,7 @@ async def generate_with_debate(
 
     # run count parallel debates, each generating 1 hypothesis
     debate_tasks = [
-        _run_single_debate(state, debate_id=i)
+        _run_single_debate(state, debate_id=i, articles_with_reasoning=articles_with_reasoning)
         for i in range(count)
     ]
 

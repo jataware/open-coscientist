@@ -111,6 +111,7 @@ LITERATURE_REVIEW_RECENCY_YEARS = 7
 
 # generate node literature tool usage parameters
 
+
 def get_draft_max_iterations(hypotheses_count: int) -> int:
     """
     calculate draft iterations based on hypotheses count

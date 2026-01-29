@@ -25,7 +25,8 @@ async def analyze_single_hypothesis(
     articles_with_reasoning: str,
     model_name: str,
     hypothesis_index: int,
-    total_count: int
+    total_count: int,
+    run_id: str | None = None,
 ) -> Optional[Dict[str, Any]]:
     """
     analyze a single hypothesis against literature observations.
@@ -48,6 +49,20 @@ async def analyze_single_hypothesis(
         hypothesis_text=hypothesis.text
     )
 
+    # save prompt to disk for debugging
+    if run_id:
+        from ..prompts import save_prompt_to_disk
+        save_prompt_to_disk(
+            run_id=run_id,
+            prompt_name=f"reflection_{hypothesis_index}",
+            content=prompt,
+            metadata={
+                "hypothesis_index": hypothesis_index,
+                "total_count": total_count,
+                "prompt_length_chars": len(prompt),
+            },
+        )
+
     try:
         # call llm
         response = await call_llm_json(
@@ -63,10 +78,7 @@ async def analyze_single_hypothesis(
 
         logger.debug(f"hypothesis {hypothesis_index} classification: {classification}")
 
-        return {
-            "classification": classification,
-            "reasoning": reasoning
-        }
+        return {"classification": classification, "reasoning": reasoning}
 
     except Exception as e:
         logger.error(f"Reflection failed for hypothesis {hypothesis_index}: {e}")
@@ -127,7 +139,8 @@ async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
             articles_with_reasoning=articles_with_reasoning,
             model_name=state["model_name"],
             hypothesis_index=i + 1,
-            total_count=len(hypotheses)
+            total_count=len(hypotheses),
+            run_id=state.get("run_id"),
         )
         for i, hyp in enumerate(hypotheses)
     ]

@@ -4,14 +4,81 @@ Prompt loading and template substitution utilities.
 All prompts are stored as markdown files in the prompts/ directory.
 """
 
+import logging
 import re
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
 from .schemas import get_schema_for_prompt
 
+logger = logging.getLogger(__name__)
 
 _PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+
+# helper functions for saving prompts to disk
+
+
+def get_prompt_save_path(run_id: str, prompt_name: str) -> Path:
+    """
+    Get path for saving a filled-in prompt to disk for debugging
+
+    Ensures the output directory exists and returns the full path
+
+    args:
+        run_id: unique run identifier (from state)
+        prompt_name: descriptive name for the prompt file (e.g., "review_batch", "literature_synthesis")
+
+    returns:
+        Path object for the prompt file location
+
+    example:
+        path = get_prompt_save_path("abc123", "review_batch")
+        # returns Path(".coscientist_prompts/abc123/review_batch.txt")
+    """
+    prompts_dir = Path(".coscientist_prompts") / run_id
+    prompts_dir.mkdir(parents=True, exist_ok=True)
+
+    # ensure .txt extension
+    if not prompt_name.endswith(".txt"):
+        prompt_name = f"{prompt_name}.txt"
+
+    return prompts_dir / prompt_name
+
+
+def save_prompt_to_disk(
+    run_id: str, prompt_name: str, content: str, metadata: Dict[str, Any] | None = None
+) -> bool:
+    """
+    Save a filled-in prompt to disk for debugging
+
+    args:
+        run_id: unique run identifier
+        prompt_name: descriptive name for the prompt file
+        content: the filled-in prompt content
+        metadata: optional dict of metadata to append (e.g., token counts, config)
+
+    returns:
+        True if saved successfully, False otherwise
+    """
+    try:
+        path = get_prompt_save_path(run_id, prompt_name)
+
+        with open(path, "w") as f:
+            f.write(content)
+
+            # append metadata if provided
+            if metadata:
+                f.write("\n\n=== METADATA (by save_prompt_to_disk) ===\n")
+                for key, value in metadata.items():
+                    f.write(f"{key}: {value}\n")
+
+        logger.debug(f"Saved prompt to: {path}")
+        return True
+
+    except Exception as e:
+        logger.warning(f"Failed to save prompt to disk: {e}")
+        return False
 
 
 def load_prompt(prompt_name: str, variables: Dict[str, Any] | None = None) -> str:
@@ -104,11 +171,13 @@ def get_generation_prompt(
     Get the hypothesis generation prompt and schema.
 
     If articles_with_reasoning is provided, uses the literature review prompt.
-    Otherwise, uses the standard generation prompt.
+    Otherwise, uses the debate generation prompt.
     """
     # determine which prompt to use based on whether literature review is available
     use_literature_prompt = bool(articles_with_reasoning)
-    prompt_name = "generation_with_literature_review" if use_literature_prompt else "generation"
+    prompt_name = (
+        "generation_debate_and_literature" if use_literature_prompt else "generation_after_debate"
+    )
 
     # prepare common variables for both prompts
     variables = {
@@ -712,9 +781,21 @@ def get_hypothesis_novelty_analysis_prompt(
 
 
 def get_hypothesis_validation_synthesis_prompt(
-    research_goal: str, hypotheses_with_analyses: list[Dict[str, Any]]
+    research_goal: str,
+    hypotheses_with_analyses: list[Dict[str, Any]],
+    articles: List[Any] | None = None,
 ) -> str:
-    """Get the prompt for validation synthesis based on novelty analyses."""
+    """
+    Get the prompt for validation synthesis based on novelty analyses.
+
+    Args:
+        research_goal: The research goal
+        hypotheses_with_analyses: List of draft hypotheses with novelty analyses
+        articles: Optional list of Article objects for citation metadata
+
+    Returns:
+        Formatted prompt string
+    """
     # format hypotheses with their novelty analyses
     hypotheses_text = []
     for i, hyp_data in enumerate(hypotheses_with_analyses, 1):
@@ -750,7 +831,11 @@ def get_hypothesis_validation_synthesis_prompt(
 
     return load_prompt(
         "hypothesis_validation_synthesis",
-        {"research_goal": research_goal, "hypotheses_with_analyses": "\n\n".join(hypotheses_text)},
+        {
+            "research_goal": research_goal,
+            "hypotheses_with_analyses": "\n\n".join(hypotheses_text),
+            "articles_metadata": format_articles_metadata(articles or []),
+        },
     )
 
 
@@ -762,6 +847,8 @@ def get_debate_generation_prompt(
     preferences: str | None = None,
     attributes: str | None = None,
     is_final_turn: bool = False,
+    articles_with_reasoning: str | None = None,
+    articles: List[Any] | None = None,
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
     Get the debate-based hypothesis generation prompt.
@@ -777,6 +864,8 @@ def get_debate_generation_prompt(
         preferences: Criteria for strong hypotheses
         attributes: Key attributes to prioritize
         is_final_turn: Whether this is the final turn (outputs JSON schema)
+        articles_with_reasoning: Optional literature review synthesis for context
+        articles: Optional list of Article objects for citation metadata
 
     Returns:
         Tuple of (formatted prompt string, JSON schema dict or None)
@@ -793,6 +882,13 @@ def get_debate_generation_prompt(
             else (attributes or "testable and falsifiable")
         ),
     }
+
+    # add literature review if provided
+    if articles_with_reasoning:
+        variables["articles_with_reasoning"] = articles_with_reasoning
+
+    # add article metadata for citations
+    variables["articles_metadata"] = format_articles_metadata(articles or [])
 
     # Format supervisor guidance if available
     if supervisor_guidance and isinstance(supervisor_guidance, dict):
@@ -824,36 +920,72 @@ def get_debate_generation_prompt(
     else:
         variables["supervisor_guidance"] = ""
 
+    # determine which prompt to use based on literature availability
+    prompt_name = (
+        "generation_debate_and_literature" if articles_with_reasoning else "generation_after_debate"
+    )
+
     # if final turn, append instruction to output JSON and use schema
     if is_final_turn:
-        prompt, schema = load_prompt_with_schema("generation_after_debate", variables)
+        prompt, schema = load_prompt_with_schema(prompt_name, variables)
 
         # append JSON output instructions for final turn
         final_instructions = """
 
 ## FINAL TURN - OUTPUT FORMAT
 
-This is the final turn of the debate. Based on the discussion above, output your finalized hypothesis in JSON format.
+This is the final turn of the debate. Based on the discussion above, output your finalized hypothesis in JSON format with all four required components:
 
-Your response must be valid JSON matching this structure:
+### 1. hypothesis (required)
+Dense technical description following "We want to develop [X] to enable [Y]" format (2-3 sentences).
+- Include specific technical details: algorithms, mechanisms, mathematical formulations
+- Be precise about what will be developed and the technical approach
+
+Example: "We want to develop a 'Dynamic Velocity Sentinel'—which monitors the rate of change in latent activation directions across early-to-mid layers rather than static depths—to enable anticipatory gating that triggers only when precursor signals cross a 'point of no return' for danger features."
+
+### 2. explanation (required)
+Clear explanation for technical audiences in layman terms (4-6 sentences).
+- Core problem being addressed
+- Why key mechanisms work
+- How components interact
+- Practical advantages
+
+Example: "This approach addresses the computational bottleneck by focusing on early layers where precursor signals first emerge. Rather than analyzing static magnitudes, the technique tracks velocity—the rate of change—which provides earlier detection of trajectories toward dangerous outputs. The system employs autoencoders to identify danger features, with dynamic gating that triggers only when trajectories cross a learned threshold."
+
+### 3. literature_grounding (required)
+Explicit grounding with proper citations (2-4 sentences).
+- Use (Author et al., year) format consistently
+- Connect specific findings from literature to hypothesis
+- If no literature available, state: "This hypothesis is formulated without access to a literature review."
+
+Example: "This approach builds on recent work in autoencoder analysis (Templeton et al., 2024) and circuit tracing (Conmy et al., 2023). The velocity monitoring concept addresses a gap in current methods that focus on static analysis (Marks et al., 2024)."
+
+### 4. experiment (required)
+Concrete experiment design with models, datasets, methodology, metrics, and validation (4-6 sentences).
+
+Example format: "Objective: Demonstrate that velocity monitoring achieves comparable detection with reduced cost. Models: GPT-2 Medium, pre-trained SAE layers 1-6. Datasets: AdvBench harmful prompts (500 examples), HH-RLHF benign prompts (1000 examples). Methodology: (1) Implement velocity tracking, (2) Train threshold detector, (3) Compare against baseline. Metrics: Detection accuracy, timing, false positive rate, computational overhead. Validation: Success requires >90% detection, <5% false positives, >50% cost reduction."
+
+---
+
+Output exactly 1 hypothesis as valid JSON:
 {
   "hypotheses": [
     {
-      "text": "Hypothesis text here",
-      "justification": "Brief explanation of novelty, significance, and scientific rationale"
+      "hypothesis": "...",
+      "explanation": "...",
+      "literature_grounding": "...",
+      "experiment": "..."
     }
   ]
 }
 
-Output exactly 1 hypothesis - the most refined and promising idea from this debate.
-
-IMPORTANT: Keep your hypothesis text concise and clear. Use plain text with standard punctuation. Avoid decorative Unicode characters or special formatting symbols.
+IMPORTANT: Use plain text with standard punctuation (no LaTeX, no decorative Unicode).
 """
         prompt = prompt + final_instructions
         return prompt, schema
     else:
         # non-final turns: no schema, just conversational
-        prompt = load_prompt("generation_after_debate", variables)
+        prompt = load_prompt(prompt_name, variables)
         return prompt, None
 
 

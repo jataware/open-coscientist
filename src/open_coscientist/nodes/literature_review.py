@@ -430,23 +430,21 @@ async def literature_review_node(state: WorkflowState) -> Dict[str, Any]:
             try:
                 # get synthesis prompt
                 synthesis_prompt = get_literature_review_synthesis_prompt(
-                    research_goal=state['research_goal'],
-                    paper_analyses=paper_analyses
+                    research_goal=state["research_goal"], paper_analyses=paper_analyses
                 )
 
-                # write synthesis prompt to disk for debugging
-                try:
-                    run_id = state.get("run_id", "unknown")
-                    prompts_output_dir = os.path.join(".coscientist_prompts", run_id)
-                    os.makedirs(prompts_output_dir, exist_ok=True)
-                    prompt_output_path = os.path.join(
-                        prompts_output_dir, "literature_review_synthesis.txt"
-                    )
-                    with open(prompt_output_path, "w") as f:
-                        f.write(synthesis_prompt)
-                    logger.debug(f"wrote synthesis prompt to: {prompt_output_path}")
-                except Exception as e:
-                    logger.warning(f"failed to write synthesis prompt to disk: {e}")
+                # save synthesis prompt to disk for debugging
+                from ..prompts import save_prompt_to_disk
+
+                save_prompt_to_disk(
+                    run_id=state.get("run_id", "unknown"),
+                    prompt_name="literature_review_synthesis",
+                    content=synthesis_prompt,
+                    metadata={
+                        "prompt_length_chars": len(synthesis_prompt),
+                        "papers_analyzed": len(paper_analyses),
+                    },
+                )
 
                 logger.info(
                     f"calling synthesis LLM with prompt length: {len(synthesis_prompt)} chars, {len(paper_analyses)} papers"

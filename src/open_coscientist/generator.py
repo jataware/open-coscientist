@@ -77,9 +77,11 @@ class HypothesisGenerator:
         # Configure cache if specified
         if enable_cache is not None:
             import os
+
             os.environ["COSCIENTIST_CACHE_ENABLED"] = "true" if enable_cache else "false"
         if cache_dir is not None:
             import os
+
             os.environ["COSCIENTIST_CACHE_DIR"] = cache_dir
 
         # Build the graph (lazy - only once)

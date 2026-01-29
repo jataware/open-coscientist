@@ -7,7 +7,6 @@ papers using tools and drafts initial hypothesis ideas based on identified gaps.
 
 import hashlib
 import logging
-import os
 from typing import Any, Dict, List
 
 from ....constants import (
@@ -103,17 +102,19 @@ async def draft_hypotheses(
         max_iterations=max_iterations,
     )
 
-    # write prompt to disk
-    try:
-        run_id = state.get("run_id", "unknown")
-        prompts_output_dir = os.path.join(".coscientist_prompts", run_id)
-        os.makedirs(prompts_output_dir, exist_ok=True)
-        prompt_output_path = os.path.join(prompts_output_dir, "generate_draft_with_tools.txt")
-        with open(prompt_output_path, "w") as f:
-            f.write(prompt)
-        logger.debug(f"wrote draft prompt to: {prompt_output_path}")
-    except Exception as e:
-        logger.warning(f"Failed to write draft prompt to disk: {e}")
+    # save prompt to disk
+    from ....prompts import save_prompt_to_disk
+
+    save_prompt_to_disk(
+        run_id=state.get("run_id", "unknown"),
+        prompt_name="generate_draft_with_tools",
+        content=prompt,
+        metadata={
+            "hypotheses_count": count,
+            "max_iterations": max_iterations,
+            "prompt_length_chars": len(prompt),
+        },
+    )
 
     # track searches in draft phase
     searches_performed_draft = []

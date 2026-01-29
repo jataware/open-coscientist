@@ -26,13 +26,13 @@ These drafts will be validated in a separate phase - focus on creative ideation 
 
 The literature review node already analyzed papers and identified key themes. Use this as **context** to understand the research landscape, then search for specific papers yourself to find gaps.
 
+#BEGIN LITERATURE REVIEW#
 ```
 {{articles_with_reasoning}}
 ```
-
-## Pre-Curated Papers (Available for Reference)
-
 {{articles_metadata}}
+
+#END LITERATURE REVIEW#
 
 ## Your Task
 
@@ -50,7 +50,7 @@ The literature review node already analyzed papers and identified key themes. Us
    - Each search returns papers with metadata (title, abstract, authors, DOI)
    - Use boolean operators (AND/OR/NOT) for precise queries
    - Example: "CRISPR gene editing AND efficiency NOT bacteria"
-   - **Note**: Metadata only (abstracts), no fulltext downloads. Full PaperQA analysis is saved for validation phase
+   - **Note**: Metadata only (abstracts), no fulltext downloads.
 
 3. **Identify research gaps** - Based on literature review context and any papers you search:
    - Mechanisms that are unexplored
@@ -63,7 +63,7 @@ The literature review node already analyzed papers and identified key themes. Us
    - Draft {{hypotheses_count}} initial hypotheses
    - Each should address a DIFFERENT gap or approach
    - Include brief reasoning for why this gap exists
-   - Cite specific papers that informed your gap identification
+   - **Cite specific papers using (Author et al., year) format** that informed your gap identification
    - Don't worry about novelty validation yet - focus on creative, diverse ideas
 
 ## Available Tools
@@ -96,7 +96,7 @@ The literature review node already analyzed papers and identified key themes. Us
 3. Identify potential mechanisms or relationships
 4. Explore a UNIQUE approach compared to other drafts
 5. Include brief reasoning about the gap it addresses
-6. Reference specific papers or findings that informed the gap
+6. **Cite specific papers using (Author et al., year) format** that informed the gap
 
 {{instructions}}
 
@@ -104,19 +104,28 @@ The literature review node already analyzed papers and identified key themes. Us
 
 **CRITICAL**: After using tools to examine papers, respond with ONLY the raw JSON object. Do NOT wrap it in markdown code blocks (no ``` or ```json). Start your response directly with { and end with }.
 
-Example format (do NOT include the word "Format:" or any wrapping):
-```
+**Output JSON structure:**
+
+```json
 {
   "drafts": [
     {
-      "text": "hypothesis statement here",
-      "gap_reasoning": "explanation of the gap this addresses, with specific paper citations from PaperQA analysis",
-      "literature_sources": "brief mention of key papers that informed this gap (include DOIs if available)"
-    },
-    ...
+      "hypothesis": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences)",
+      "explanation": "Step-by-step layman explanation (4-6 sentences)",
+      "gap_reasoning": "Brief explanation of what gap in the literature this hypothesis addresses and why it seems promising",
+      "literature_sources": "Specific papers from literature review cited in (Author et al., year) format. Example: 'Based on retinal imaging findings (Smith et al., 2025) and identified gaps regarding tau isoforms (Jones et al., 2024; Brown et al., 2025).'",
+      "experiment": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)"
+    }
   ]
 }
 ```
+
+**Field requirements:**
+- `hypothesis`: Technical formulation following "We want to develop [X] to enable [Y]" format
+- `explanation`: Clear explanation for technical audiences in layman terms
+- `gap_reasoning`: What research gap this addresses and why it's promising
+- `literature_sources`: **CRITICAL - Use proper citations in (Author et al., year) format for papers from the literature review. Example: "This gap was identified in retinal imaging studies (Smith et al., 2025) and tau proteoform research (Jones et al., 2024)."**
+- `experiment`: Concrete, actionable experiment design to test the hypothesis
 
 **Text formatting guidelines:**
 - Use standard scientific notation and symbols (Greek letters like τ, β, α, mathematical operators like ≥, ≤, ±)
@@ -125,4 +134,4 @@ Example format (do NOT include the word "Format:" or any wrapping):
 - If copying from literature, convert LaTeX notation to Unicode symbols or plain text
 - Prefer concise plain text when it communicates the idea equally well
 
-Draft {{hypotheses_count}} diverse hypothesis ideas now. Respond with raw JSON only.
+Draft {{hypotheses_count}} diverse hypothesis ideas now. Output raw JSON with "drafts" array containing objects with the 5 required fields above.
