@@ -636,50 +636,6 @@ REFLECTION_SCHEMA: Dict[str, Any] = {
 }
 
 
-# pdf analysis schema for subagent processing
-# PDF_ANALYSIS_SCHEMA: Dict[str, Any] = {
-#     "name": "pdf_analysis",
-#     "strict": False,
-#     "schema": {
-#         "type": "object",
-#         "properties": {
-#             "key_findings": {
-#                 "type": "array",
-#                 "description": "main findings and conclusions from the paper",
-#                 "items": {"type": "string"},
-#             },
-#             "methodologies": {
-#                 "type": "array",
-#                 "description": "research methods, datasets, experimental approaches used",
-#                 "items": {"type": "string"},
-#             },
-#             "limitations": {
-#                 "type": "array",
-#                 "description": "limitations, gaps, or challenges identified by authors",
-#                 "items": {"type": "string"},
-#             },
-#             "future_work": {
-#                 "type": "array",
-#                 "description": "future research directions or open problems mentioned",
-#                 "items": {"type": "string"},
-#             },
-#             "relevance_to_research_goal": {
-#                 "type": "string",
-#                 "description": "how this paper relates to the research goal and what insights it provides",
-#             },
-#         },
-#         "required": [
-#             "key_findings",
-#             "methodologies",
-#             "limitations",
-#             "future_work",
-#             "relevance_to_research_goal",
-#         ],
-#         "additionalProperties": False,
-#     },
-# }
-
-
 # Supervisor schema
 SUPERVISOR_SCHEMA: Dict[str, Any] = {
     "name": "supervisor_guidance",
@@ -1006,8 +962,6 @@ def get_schema_for_prompt(prompt_name: str) -> Optional[Dict[str, Any]]:
         JSON schema dict or None if no schema is defined for this prompt
     """
     schema_map = {
-        # "generation": GENERATION_SCHEMA,
-        # "generation_with_literature_review": GENERATION_SCHEMA,
         "generation_draft_with_tools": GENERATION_DRAFT_SCHEMA,
         "generation_debate_and_literature": GENERATION_SCHEMA,
         "generation_after_debate": GENERATION_SCHEMA,
@@ -1018,7 +972,6 @@ def get_schema_for_prompt(prompt_name: str) -> Optional[Dict[str, Any]]:
         "ranking": RANKING_SCHEMA,
         "proximity": PROXIMITY_SCHEMA,
         "reflection_observations": REFLECTION_SCHEMA,
-        # "pdf_analysis": PDF_ANALYSIS_SCHEMA,
         "supervisor": SUPERVISOR_SCHEMA,
         "literature_query_generation": LITERATURE_QUERY_SCHEMA,
         "literature_review_paper_analysis": LITERATURE_PAPER_ANALYSIS_SCHEMA,
