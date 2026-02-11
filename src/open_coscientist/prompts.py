@@ -648,6 +648,62 @@ def get_literature_review_query_generation_pubmed_prompt(
     )
 
 
+def get_literature_review_query_generation_prompt(
+    research_goal: str,
+    source_type: str = "academic",
+    preferences: str | None = None,
+    attributes: list[str] | None = None,
+    user_literature: list[str] | None = None,
+    user_hypotheses: list[str] | None = None,
+) -> str:
+    """
+    Get source-aware query generation prompt.
+
+    Selects the appropriate prompt template based on source type:
+    - knowledge_graph (INDRA): Extract gene/protein names
+    - academic (PubMed, arXiv, Scholar): Natural language queries
+    - pubmed: PubMed-specific (backwards compat)
+
+    Args:
+        research_goal: The research goal
+        source_type: Type of literature source (from ToolConfig.source_type)
+        preferences: Optional user preferences
+        attributes: Optional user attributes
+        user_literature: Optional user-provided literature
+        user_hypotheses: Optional user-provided hypotheses
+
+    Returns:
+        Formatted prompt string
+    """
+    # select template based on source type
+    if source_type == "knowledge_graph":
+        template_name = "literature_review_query_generation_indra"
+    elif source_type == "pubmed":
+        template_name = "literature_review_query_generation_pubmed"
+    else:
+        # generic fallback for other academic sources
+        template_name = "literature_review_query_generation_generic"
+
+    return load_prompt(
+        template_name,
+        {
+            "research_goal": research_goal,
+            "preferences": preferences if preferences else "None provided",
+            "attributes": ", ".join(attributes) if attributes else "None provided",
+            "user_literature": (
+                "\n".join(f"- {lit}" for lit in user_literature)
+                if user_literature
+                else "None provided"
+            ),
+            "user_hypotheses": (
+                "\n".join(f"- {hyp}" for hyp in user_hypotheses)
+                if user_hypotheses
+                else "None provided"
+            ),
+        },
+    )
+
+
 def get_literature_review_paper_analysis_prompt(
     research_goal: str, title: str, authors: list[str], year: int | None, fulltext: str
 ) -> str:

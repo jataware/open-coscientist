@@ -30,6 +30,7 @@ from ..mcp_client import get_mcp_client, check_literature_source_available
 from ..models import Article
 from ..prompts import (
     get_literature_review_query_generation_pubmed_prompt,
+    get_literature_review_query_generation_prompt,
     get_literature_review_paper_analysis_prompt,
     get_literature_review_synthesis_prompt,
 )
@@ -316,9 +317,37 @@ async def literature_review_node(state: WorkflowState) -> Dict[str, Any]:
             query_gen_tool_name = None  # trigger fallback
 
     if not queries:
-        # fallback to LLM-based query generation (default for PubMed)
-        query_generation_prompt = get_literature_review_query_generation_pubmed_prompt(
+        # fallback to LLM-based query generation (source-aware)
+        # determine source type for appropriate prompt selection
+        query_source_type = "academic"  # default
+
+        if is_multi_source and workflow:
+            # multi-source mode: check if any source is knowledge_graph
+            source_types = []
+            for source in workflow.get_enabled_search_sources():
+                tool_cfg = tool_registry.get_tool(source.tool)
+                if tool_cfg:
+                    source_types.append(tool_cfg.source_type)
+
+            if "knowledge_graph" in source_types and len(source_types) > 1:
+                logger.warning(
+                    "Multi-source mode with knowledge_graph detected. "
+                    "Using generic queries. For best results, use per-source query generation."
+                )
+                query_source_type = "academic"  # use generic
+            elif "knowledge_graph" in source_types:
+                query_source_type = "knowledge_graph"
+            else:
+                query_source_type = "academic"
+
+        elif search_tool_config:
+            # single-source mode: use the configured source type
+            query_source_type = search_tool_config.source_type
+            logger.debug(f"Using {query_source_type} query generation prompt")
+
+        query_generation_prompt = get_literature_review_query_generation_prompt(
             research_goal=state["research_goal"],
+            source_type=query_source_type,
             preferences=preferences,
             attributes=attributes,
             user_literature=user_literature,
