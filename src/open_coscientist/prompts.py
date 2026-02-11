@@ -610,66 +610,6 @@ def _format_supervisor_guidance_for_meta_review(supervisor_guidance: Dict[str, A
     return "".join(sections) if sections else ""
 
 
-def _format_evolution_details_context(evolution_details: List[Dict[str, Any]] | None) -> str:
-    """Format evolution details for meta-review prompts."""
-    if (
-        not evolution_details
-        or not isinstance(evolution_details, list)
-        or len(evolution_details) == 0
-    ):
-        return ""
-
-    sections = []
-    sections.append("## Previous Evolution History\n")
-    sections.append(
-        "The following hypotheses were evolved in previous iterations. Consider what changes were made and their effectiveness:\n\n"
-    )
-
-    # Show last 5 evolution details to avoid overwhelming the prompt
-    recent_evolutions = evolution_details[-5:]
-    for i, evo_detail in enumerate(recent_evolutions, 1):
-        if isinstance(evo_detail, dict):
-            original = evo_detail.get("original", "")[:150]
-            evolved = evo_detail.get("evolved", "")[:150]
-            rationale = evo_detail.get("rationale", "")[:100]
-
-            sections.append(f"**Evolution {i}:**\n")
-            sections.append(f"- Original: {original}...\n")
-            sections.append(f"- Evolved: {evolved}...\n")
-            if rationale:
-                sections.append(f"- Rationale: {rationale}...\n")
-            sections.append("\n")
-
-    sections.append(
-        "Use this history to inform your recommendations and avoid repeating ineffective changes.\n"
-    )
-
-    return "".join(sections) if sections else ""
-
-
-def _format_supervisor_guidance_for_evolution(supervisor_guidance: Dict[str, Any] | None) -> str:
-    """Format supervisor guidance for evolution prompts."""
-    if not supervisor_guidance or not isinstance(supervisor_guidance, dict):
-        return ""
-
-    sections = []
-    workflow_plan = supervisor_guidance.get("workflow_plan", {})
-    evolution_phase = workflow_plan.get("evolution_phase", {})
-
-    if evolution_phase:
-        sections.append("## Supervisor Guidance for Evolution\n")
-        if evolution_phase.get("refinement_priorities"):
-            priorities = evolution_phase["refinement_priorities"]
-            if isinstance(priorities, list):
-                priorities = ", ".join(priorities)
-            sections.append(f"**Refinement Priorities:** {priorities}\n")
-        if evolution_phase.get("iteration_strategy"):
-            sections.append(f"**Iteration Strategy:** {evolution_phase['iteration_strategy']}\n")
-        sections.append("\nUse this guidance to align your refinement with the research plan.\n")
-
-    return "".join(sections) if sections else ""
-
-
 def get_reflection_prompt(
     articles_with_reasoning: str, hypothesis_text: str
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
@@ -1126,6 +1066,61 @@ You can use tools to:
 """
 
 
+def build_tool_instructions(
+    tool_ids: List[str],
+    tool_registry: Optional[Any] = None,
+) -> str:
+    """
+    Build dynamic tool instructions section from tool registry.
+
+    Args:
+        tool_ids: List of tool IDs to include in instructions
+        tool_registry: ToolRegistry instance with tool configurations
+
+    Returns:
+        Formatted markdown section describing available tools
+    """
+    # if no registry provided, try to get the global one
+    if tool_registry is None:
+        try:
+            from .config import get_tool_registry
+
+            tool_registry = get_tool_registry()
+            # if no tool_ids provided, get them from draft workflow
+            if not tool_ids:
+                tool_ids = tool_registry.get_tools_for_workflow("draft_generation")
+        except Exception:
+            pass
+
+    if not tool_registry or not tool_ids:
+        # minimal fallback when no config available
+        return "No tool configuration available. Literature tools may not be accessible."
+
+    sections = []
+
+    for tool_id in tool_ids:
+        tool_config = tool_registry.get_tool(tool_id)
+        if not tool_config or not tool_config.enabled:
+            continue
+
+        # add tool entry
+        sections.append(f"- `{tool_config.mcp_tool_name}`: {tool_config.description}")
+
+        # add prompt snippet if available
+        if tool_config.prompt_snippet:
+            # indent the snippet
+            snippet_lines = tool_config.prompt_snippet.strip().split("\n")
+            for line in snippet_lines:
+                sections.append(f"  {line}")
+
+        sections.append("")  # blank line between tools
+
+    if not sections:
+        return "No tools available."
+
+    return "\n".join(sections).strip()
+
+
 def get_draft_prompt_with_tools(
     research_goal: str,
     hypotheses_count: int,
@@ -1137,14 +1132,36 @@ def get_draft_prompt_with_tools(
     user_hypotheses: List[str] | None = None,
     instructions: str | None = None,
     max_iterations: int = 8,
+    tool_registry: Optional[Any] = None,
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
-    get prompt for Phase 1: drafting hypotheses with tools
+    Get prompt for Phase 1: drafting hypotheses with tools.
 
-    uses generation_draft_with_tools.md template
-    focuses on reading papers and identifying gaps
-    includes lit review summary as context (not instructions)
+    Uses generation_draft_with_tools.md template.
+    Focuses on reading papers and identifying gaps.
+    Includes lit review summary as context (not instructions).
+
+    Args:
+        research_goal: The research goal
+        hypotheses_count: Number of hypotheses to draft
+        supervisor_guidance: Optional guidance from supervisor
+        articles: List of Article objects from literature review
+        articles_with_reasoning: Literature review synthesis
+        preferences: Criteria for strong hypotheses
+        attributes: Key attributes to prioritize
+        user_hypotheses: User-provided starting hypotheses
+        instructions: Custom instructions
+        max_iterations: Max tool iterations for the agent
+        tool_registry: Optional ToolRegistry for dynamic tool instructions
     """
+    # get tool IDs for draft generation workflow
+    tool_ids = []
+    if tool_registry:
+        tool_ids = tool_registry.get_tools_for_workflow("draft_generation")
+
+    # build dynamic tool instructions
+    tool_instructions = build_tool_instructions(tool_ids, tool_registry)
+
     variables = {
         "goal": research_goal,
         "hypotheses_count": hypotheses_count,
@@ -1158,6 +1175,7 @@ def get_draft_prompt_with_tools(
         "max_iterations": max_iterations,
         "instructions": instructions
         or "Focus on creative ideation - draft diverse hypotheses based on literature gaps.",
+        "tool_instructions": tool_instructions,
     }
 
     return load_prompt_with_schema("generation_draft_with_tools", variables)

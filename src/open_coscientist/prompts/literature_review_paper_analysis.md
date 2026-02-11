@@ -1,6 +1,6 @@
 # Analyze Single Research Paper for Hypothesis Generation Opportunities
 
-You are analyzing a biomedical research paper to identify opportunities for novel hypothesis generation.
+You are analyzing a research paper to identify opportunities for novel hypothesis generation.
 
 ## Research Goal
 {{research_goal}}

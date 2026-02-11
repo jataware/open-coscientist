@@ -1,0 +1,168 @@
+# Open Coscientist Tool Configuration
+# Version 1.0
+#
+# This file defines available MCP servers, tools, and workflow configurations.
+# Users can override this by creating ~/.coscientist/tools.yaml
+#
+# Environment variables can be used with ${VAR} or ${VAR:-default} syntax.
+
+version: "1.0"
+
+# MCP Server Definitions
+servers:
+  default_pubmed:
+    url: "${MCP_SERVER_URL:-http://localhost:8888/mcp}"
+    transport: "streamable_http"
+    enabled: true
+
+# Tool Definitions
+# Organized by category: search_tools, read_tools, utility_tools
+tools:
+  search_tools:
+    # PubMed metadata search (used in draft phase)
+    pubmed_search:
+      server: "default_pubmed"
+      mcp_tool_name: "search_pubmed"
+      display_name: "PubMed Search"
+      description: "Search PubMed for biomedical papers and return metadata (title, abstract, authors, DOI)"
+      category: "search"
+      source_type: "academic"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "."
+        is_dict: true
+        field_mapping:
+          title: "title"
+          url: "@url_from_key"
+          authors: "authors"
+          year: "date_revised|split:/|index:0|int"
+          abstract: "abstract"
+          source_id: "@key"
+          source: "'pubmed'"
+          venue: "publication"
+
+      prompt_snippet: |
+        Use `search_pubmed` to search PubMed and get paper metadata (title, abstract, authors, DOI).
+        - Returns metadata only (abstracts), no fulltext downloads
+        - Use boolean operators (AND/OR/NOT) for precise queries
+        - Example: search_pubmed(query="CRISPR gene editing AND efficiency NOT bacteria", max_papers=5)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "PubMed search query with boolean operators"
+        max_papers:
+          type: "integer"
+          default: 10
+          description: "Maximum number of papers to return"
+
+    # PubMed fulltext search (used in literature review and validation)
+    pubmed_fulltext:
+      server: "default_pubmed"
+      mcp_tool_name: "pubmed_search_with_fulltext"
+      display_name: "PubMed Fulltext Search"
+      description: "Search PubMed and download fulltexts from PMC for comprehensive analysis"
+      category: "search_with_content"
+      source_type: "academic"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "."
+        is_dict: true
+        field_mapping:
+          title: "title"
+          url: "@url_from_key"
+          authors: "authors"
+          year: "date_revised|split:/|index:0|int"
+          abstract: "abstract"
+          content: "fulltext"
+          source_id: "@key"
+          source: "'pubmed'"
+          venue: "publication"
+          pmc_id: "pmc_full_text_id"
+
+      # PubMed uses canonical parameter names (1:1 mapping)
+      parameter_mapping:
+        query: "query"
+        slug: "slug"
+        max_papers: "max_papers"
+        recency_years: "recency_years"
+        run_id: "run_id"
+
+      prompt_snippet: |
+        Use `pubmed_search_with_fulltext` to search PubMed AND download fulltexts from PMC.
+        - Downloads full paper content when available via PMC
+        - Use for comprehensive literature analysis
+        - Example: pubmed_search_with_fulltext(query="...", slug="research_abc", max_papers=5)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "PubMed search query"
+        slug:
+          type: "string"
+          required: true
+          description: "Unique identifier for this research corpus"
+        max_papers:
+          type: "integer"
+          default: 10
+          description: "Maximum number of papers to return"
+        recency_years:
+          type: "integer"
+          default: 0
+          description: "Filter to papers from last N years (0 = no filter)"
+        run_id:
+          type: "string"
+          required: false
+          description: "Optional run ID for tracking"
+
+  utility_tools:
+    # PubMed availability check
+    check_pubmed:
+      server: "default_pubmed"
+      mcp_tool_name: "check_pubmed_available"
+      display_name: "Check PubMed Availability"
+      description: "Check if PubMed API is accessible via the MCP server"
+      category: "utility"
+      enabled: true
+
+      response_format:
+        type: "boolean_string"
+
+# Workflow Configurations
+# Define which tools are available in each phase of hypothesis generation
+workflows:
+  # Literature review phase - comprehensive paper analysis
+  literature_review:
+    primary_search: "pubmed_fulltext"
+    fallback_search: "pubmed_search"
+    availability_check: "check_pubmed"
+
+  # Draft generation phase - quick metadata searches for ideation
+  draft_generation:
+    search_tools:
+      - "pubmed_search"
+
+  # Validation phase - fulltext searches for novelty checking
+  validation:
+    search_tools:
+      - "pubmed_fulltext"
+
+# Global Settings
+settings:
+  # Auto-discover tools from connected MCP servers
+  auto_discover: true
+
+  # How to merge user config with defaults:
+  # - override: user values replace defaults for matching keys
+  # - extend: user values add to defaults
+  # - replace: user config completely replaces defaults
+  merge_strategy: "override"
+
+  # Allow users to disable built-in tools
+  allow_disable_builtins: true

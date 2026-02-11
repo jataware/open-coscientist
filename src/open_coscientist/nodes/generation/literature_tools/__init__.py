@@ -23,23 +23,26 @@ logger = logging.getLogger(__name__)
 
 async def generate_with_tools(state: WorkflowState, count: int) -> List[Hypothesis]:
     """
-    generate hypotheses with two-phase tool-based process (draft → validate)
+    Generate hypotheses with two-phase tool-based process (draft -> validate).
 
-    phase 1: draft hypotheses by reading papers and identifying gaps
-    phase 2: validate novelty by searching and refining/pivoting
+    Phase 1: draft hypotheses by reading papers and identifying gaps
+    Phase 2: validate novelty by searching and refining/pivoting
 
-    args:
-        state: current workflow state
-        count: number of hypotheses to generate
+    Args:
+        state: Current workflow state
+        count: Number of hypotheses to generate
 
-    returns:
-        list of validated hypotheses with generation_method="literature_tools"
+    Returns:
+        List of validated hypotheses with generation_method="literature_tools"
     """
     logger.info(f"Generating {count} hypotheses with two-phase tool-based process")
 
+    # get tool registry from state (may be None for backwards compatibility)
+    tool_registry = state.get("tool_registry")
+
     # get MCP client
     try:
-        mcp_client = await get_mcp_client()
+        mcp_client = await get_mcp_client(tool_registry=tool_registry)
     except Exception as e:
         logger.warning(f"Failed to get MCP client: {e}")
         raise
@@ -68,7 +71,9 @@ async def generate_with_tools(state: WorkflowState, count: int) -> List[Hypothes
             )
 
     # Phase 1: Draft hypotheses (reads pre-curated papers)
-    draft_hyps = await draft_hypotheses(state=state, count=count, mcp_client=mcp_client)
+    draft_hyps = await draft_hypotheses(
+        state=state, count=count, mcp_client=mcp_client, tool_registry=tool_registry
+    )
 
     logger.info(f"Phase 1 complete: drafted {len(draft_hyps)} hypotheses")
 

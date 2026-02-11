@@ -218,6 +218,9 @@ class WorkflowState(TypedDict):
     dev_test_lit_tools_isolation: Optional[bool]
     """Development mode: force cache on lit review, allocate all hypotheses to lit tools (no debate)."""
 
+    tool_registry: Optional[Any]
+    """Optional ToolRegistry for config-driven tool selection."""
+
 
 class WorkflowConfig(TypedDict):
     """Configuration for the hypothesis generation workflow."""

@@ -101,20 +101,20 @@ DEFAULT_CACHE_ENABLED = True
 """Whether caching is enabled by default (controls both LLM and node-level caching)."""
 
 LITERATURE_REVIEW_PAPERS_COUNT = 10
-"""number of papers to collect from pubmed (configurable via env var)"""
+"""number of papers to collect from MCP servers/tools (configurable via env var)"""
 
 LITERATURE_REVIEW_PAPERS_COUNT_DEV = 4
 """number of papers in dev mode for faster iteration"""
 
 LITERATURE_REVIEW_RECENCY_YEARS = 7
-"""filter pubmed papers to last N years for better relevance (0 = no filter)"""
+"""filter papers to last N years for better relevance (0 = no filter)"""
 
 # generate node literature tool usage parameters
 
 
 def get_draft_max_iterations(hypotheses_count: int) -> int:
     """
-    calculate draft iterations based on hypotheses count
+    Calculate draft iterations based on hypotheses count
 
     formula: base iterations (for reading papers) + per-hypothesis budget
     - need to read papers: 5 base iterations
@@ -131,7 +131,7 @@ def get_draft_max_iterations(hypotheses_count: int) -> int:
 
 def get_validate_max_iterations(hypotheses_count: int) -> int:
     """
-    calculate validate iterations based on hypotheses count
+    Calculate validate iterations based on hypotheses count
 
     formula: per-hypothesis budget for search + read + refine
     - each hypothesis needs: search (2) + read papers (3-5) + refine (2-3)

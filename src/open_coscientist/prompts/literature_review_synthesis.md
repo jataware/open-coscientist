@@ -13,7 +13,7 @@ You are synthesizing biomedical literature to guide novel hypothesis generation.
 
 ## Your Task
 
-Create a comprehensive synthesis that identifies opportunities for novel hypotheses. Structure your synthesis around:
+Create a focused synthesis that identifies opportunities for novel hypotheses. Structure your synthesis around these four sections:
 
 ### 1. Current State of Knowledge
 What is currently known in this research area? What are the established findings and consensus views?
@@ -27,23 +27,19 @@ What methodological limitations exist in current research? What new approaches c
 ### 4. Unexplored Intersections
 What connections or relationships between findings have not been explored? Where could combining insights from different papers lead to new understanding?
 
-### 5. Future Directions
-Based on the gaps and opportunities identified, what are the most promising directions for novel research?
-
-### 6. Hypothesis Generation Guidance
-What specific areas or questions are ripe for novel hypothesis generation? Be concrete and actionable.
-
 ## Guidelines
 
-- Focus on actionable insights for hypothesis generation.
-- Identify patterns and themes across multiple papers.
-- Highlight contradictions or unexplained findings.
-- Be specific about opportunities, not vague generalities.
-- Prioritize recent findings and emerging areas.
+- For each section, identify 4-8 key themes and describe each concisely (2-4 sentences per theme)
+- Prioritize the most significant findings over cataloging everything
+- Organize themes into logical sub-categories with clear headers
+- Identify patterns across multiple papers
+- Highlight contradictions or unexplained findings
+- Be specific about opportunities, not vague generalities
+- Focus on actionable insights that can inform hypothesis generation
 
 ## Response Format
 
-Return your synthesis as a well-structured markdown document with the sections above. Use clear headings and organize insights logically.
+Return your synthesis as a well-structured markdown document with the four sections above. Within each section, organize insights into thematic sub-categories with bold headers.
 
 **Important:** Do not include citations in the synthesis. The papers analyzed will be listed separately as references.
 

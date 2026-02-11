@@ -7,7 +7,7 @@ papers using tools and drafts initial hypothesis ideas based on identified gaps.
 
 import hashlib
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from ....constants import (
     EXTENDED_MAX_TOKENS,
@@ -20,27 +20,33 @@ from ....state import WorkflowState
 from ....tools.literature import literature_tools
 from ....tools.provider import HybridToolProvider
 
+if TYPE_CHECKING:
+    from ....config import ToolRegistry
+
 logger = logging.getLogger(__name__)
 
 
 async def draft_hypotheses(
-    state: WorkflowState, count: int, mcp_client: Any
+    state: WorkflowState,
+    count: int,
+    mcp_client: Any,
+    tool_registry: Optional["ToolRegistry"] = None,
 ) -> List[Dict[str, str]]:
     """
-    phase 1: draft hypotheses by searching pubmed for metadata
+    Phase 1: draft hypotheses by searching literature sources for metadata.
 
-    uses tools for searching biomedical literature:
-    - search_pubmed (search pubmed and get paper metadata: title, abstract, authors, DOI)
+    Uses tools for searching research literature.
+    Tool whitelist is determined from tool_registry if provided,
+    otherwise falls back to hardcoded default.
 
-    note: fulltext download analysis deferred to validate phase
-
-    args:
-        state: current workflow state
-        count: number of hypotheses to draft
+    Args:
+        state: Current workflow state
+        count: Number of hypotheses to draft
         mcp_client: MCP client for tool access
+        tool_registry: Optional ToolRegistry for config-driven tool selection
 
-    returns:
-        list of draft dicts with text, gap_reasoning, literature_sources
+    Returns:
+        List of draft dicts with text, gap_reasoning, literature_sources
     """
     logger.info(f"Phase 1: Drafting {count} hypotheses by examining literature")
 
@@ -72,18 +78,32 @@ async def draft_hypotheses(
     # initialize hybrid tool provider with draft-specific whitelist
     provider = HybridToolProvider(mcp_client=mcp_client, python_registry=literature_tools)
 
-    # draft whitelist: pubmed metadata search only (no fulltext download)
-    # validate phase will download fulltexts for novelty checking
-    mcp_whitelist = ["search_pubmed"]
+    # get tool whitelist from registry or try global registry
+    if tool_registry is None:
+        try:
+            from ....config import get_tool_registry
+
+            tool_registry = get_tool_registry()
+            logger.info("Using global tool registry")
+        except Exception as e:
+            logger.warning(f"Failed to get tool registry: {e}")
+
+    if tool_registry:
+        tool_ids = tool_registry.get_tools_for_workflow("draft_generation")
+        mcp_whitelist = tool_registry.get_mcp_tool_names(tool_ids)
+        logger.info(f"Using tool registry whitelist: {mcp_whitelist}")
+    else:
+        # no registry available - let provider use all available tools
+        mcp_whitelist = None
+        logger.warning("No tool registry - using all available MCP tools")
+
     python_whitelist = []
 
     tools_dict, openai_tools = provider.get_tools(
         mcp_whitelist=mcp_whitelist, python_whitelist=python_whitelist
     )
 
-    logger.info(
-        f"Initialized draft provider with {len(tools_dict)} tools (pubmed metadata search only)"
-    )
+    logger.info(f"Initialized draft provider with {len(tools_dict)} tools")
 
     # calculate dynamic iteration budget based on hypotheses count
     max_iterations = get_draft_max_iterations(count)
@@ -100,6 +120,7 @@ async def draft_hypotheses(
         attributes=attributes,
         user_hypotheses=user_hypotheses,
         max_iterations=max_iterations,
+        tool_registry=tool_registry,
     )
 
     # save prompt to disk
@@ -116,24 +137,18 @@ async def draft_hypotheses(
         },
     )
 
-    # track searches in draft phase
-    searches_performed_draft = []
-
-    # track tool calls
-    tool_call_count = {"pubmed_search": 0}
+    # track tool calls in draft phase
+    tool_call_counts: Dict[str, int] = {}
 
     # create tracked executor for draft phase
     async def draft_tracked_executor(tool_call):
-        """track searches for draft phase"""
+        """Track and execute tool calls for draft phase."""
         tool_name = tool_call.function.name
 
-        # track pubmed searches (but don't limit - let agent decide)
-        if tool_name == "search_pubmed":
-            tool_call_count["pubmed_search"] += 1
-            searches_performed_draft.append(tool_name)
-            logger.info(
-                f"Draft: PubMed search #{tool_call_count['pubmed_search']} (metadata only, no fulltext)"
-            )
+        # track all tool calls
+        tool_call_counts[tool_name] = tool_call_counts.get(tool_name, 0) + 1
+        call_num = tool_call_counts[tool_name]
+        logger.info(f"Draft: {tool_name} call #{call_num}")
 
         # execute tool
         return await provider.execute_tool_call(tool_call)
@@ -157,9 +172,9 @@ async def draft_hypotheses(
         logger.error(f"Draft phase failed: {e}")
         raise
 
-    logger.info(
-        f"Draft phase complete: {tool_call_count['pubmed_search']} PubMed searches (metadata only, fulltext deferred to validate)"
-    )
+    total_calls = sum(tool_call_counts.values())
+    calls_summary = ", ".join(f"{name}={count}" for name, count in tool_call_counts.items())
+    logger.info(f"Draft phase complete: {total_calls} tool calls ({calls_summary})")
 
     # parse JSON response (strip markdown if present, then use repair logic)
     response_text = final_response.strip()

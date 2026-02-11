@@ -8,7 +8,7 @@ but uses LangGraph under the hood.
 import logging
 import time
 import uuid
-from typing import Any, AsyncIterator, Callable, Dict, Literal, Optional, Tuple, Union, overload
+from typing import Any, AsyncIterator, Callable, Dict, List, Literal, Optional, Tuple, Union, overload
 
 from langgraph.graph import END, StateGraph
 
@@ -57,6 +57,8 @@ class HypothesisGenerator:
         evolution_max_count: int = DEFAULT_EVOLUTION_MAX_COUNT,
         enable_cache: Optional[bool] = None,
         cache_dir: Optional[str] = None,
+        tools_config: Optional[str] = None,
+        disable_tools: Optional[List[str]] = None,
     ):
         """
         Initialize the hypothesis generator.
@@ -68,6 +70,8 @@ class HypothesisGenerator:
             evolution_max_count: Number of top hypotheses to evolve
             enable_cache: Enable/disable LLM response caching (None = use env var)
             cache_dir: Directory for cache files (None = use default)
+            tools_config: Path to custom tools YAML config file (None = use defaults)
+            disable_tools: List of tool IDs to disable (None = use all enabled tools)
         """
         self.model_name = model_name
         self.max_iterations = max_iterations
@@ -83,6 +87,19 @@ class HypothesisGenerator:
             import os
 
             os.environ["COSCIENTIST_CACHE_DIR"] = cache_dir
+
+        # Initialize tool registry if tools_config or disable_tools specified
+        self._tool_registry = None
+        if tools_config is not None or disable_tools is not None:
+            from .config import ToolRegistry
+
+            self._tool_registry = ToolRegistry(
+                config_path=tools_config,
+                disabled_tools=disable_tools,
+            )
+            logger.info(
+                f"Initialized tool registry: {len(self._tool_registry.get_enabled_tools())} enabled tools"
+            )
 
         # Build the graph (lazy - only once)
         self._graph = None
@@ -250,9 +267,11 @@ class HypothesisGenerator:
             # Lazy init: check once per instance on first call
             # Only check if we're running with literature review
             if self._mcp_available is None:
-                self._mcp_available = await check_mcp_available()
+                self._mcp_available = await check_mcp_available(tool_registry=self._tool_registry)
             if self._pubmed_available is None:
-                self._pubmed_available = await check_pubmed_available_via_mcp()
+                self._pubmed_available = await check_pubmed_available_via_mcp(
+                    tool_registry=self._tool_registry
+                )
 
             # Use cached values
             mcp_available = self._mcp_available
@@ -333,6 +352,8 @@ class HypothesisGenerator:
             "pubmed_available": pubmed_available,
             "enable_tool_calling_generation": enable_tool_calling_generation,
             "dev_test_lit_tools_isolation": dev_test_lit_tools_isolation,
+            # tool registry for config-driven tool selection
+            "tool_registry": self._tool_registry,
             # Optional user preferences and inputs
             "preferences": opts.get("preferences"),
             "attributes": opts.get("attributes"),

@@ -30,6 +30,7 @@ dependencies = [
     "typing-extensions~=4.15.0",
     "rich~=14.2.0",
     "jsonschema~=4.26.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -55,7 +56,7 @@ where = ["src"]
 include = ["open_coscientist*"]
 
 [tool.setuptools.package-data]
-open_coscientist = ["prompts/*.md"]
+open_coscientist = ["prompts/*.md", "config/*.yaml"]
 
 [tool.black]
 line-length = 100
