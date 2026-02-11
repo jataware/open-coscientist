@@ -1,0 +1,330 @@
+# Multi-Source MCP Server Tool Configuration
+#
+# This file demonstrates multi-source literature review combining PubMed and arXiv.
+# Place this alongside the default tools.yaml or pass via tools_config parameter.
+#
+# Environment variables can be used with ${VAR} or ${VAR:-default} syntax.
+
+version: "1.0"
+
+# MCP Server Definitions
+servers:
+  # One external MCP server, includes tools for pubmed, arxiv
+  one_server:
+    url: "${ARXIV_MCP_SERVER_URL:-http://localhost:8889/mcp}"
+    transport: "streamable_http"
+    enabled: true
+
+# Tool Definitions
+tools:
+  search_tools:
+    # PubMed fulltext search (from default server)
+    pubmed_fulltext:
+      server: "one_server"
+      mcp_tool_name: "pubmed_search_with_fulltext"
+      display_name: "PubMed Fulltext Search"
+      description: "Search PubMed and download fulltexts from PMC for comprehensive analysis"
+      category: "search_with_content"
+      source_type: "academic"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "."
+        is_dict: true
+        field_mapping:
+          title: "title"
+          url: "@url_from_key"
+          authors: "authors"
+          year: "date_revised|split:/|index:0|int"
+          abstract: "abstract"
+          content: "fulltext"
+          source_id: "@key"
+          source: "'pubmed'"
+          venue: "publication"
+          pmc_id: "pmc_full_text_id"
+
+      parameter_mapping:
+        query: "query"
+        slug: "slug"
+        max_papers: "max_papers"
+        recency_years: "recency_years"
+        run_id: "run_id"
+
+      prompt_snippet: |
+        Use `pubmed_search_with_fulltext` to search PubMed AND download fulltexts from PMC.
+        - Downloads full paper content when available via PMC
+        - Use for comprehensive literature analysis
+        - Example: pubmed_search_with_fulltext(query="...", slug="research_abc", max_papers=5)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "PubMed search query"
+        slug:
+          type: "string"
+          required: true
+          description: "Unique identifier for this research corpus"
+        max_papers:
+          type: "integer"
+          default: 10
+          description: "Maximum number of papers to return"
+        recency_years:
+          type: "integer"
+          default: 0
+          description: "Filter to papers from last N years (0 = no filter)"
+        run_id:
+          type: "string"
+          required: false
+          description: "Optional run ID for tracking"
+
+    # arXiv paper search
+    arxiv_search:
+      server: "one_server"
+      mcp_tool_name: "search_arxiv"
+      display_name: "arXiv Search"
+      description: "Search arXiv for preprints and recent research (especially strong for AI/ML, physics, math, CS)"
+      category: "search"
+      source_type: "preprint"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "results"
+        is_dict: false
+        field_mapping:
+          title: "title"
+          url: "url"
+          authors: "authors"
+          year: "year"
+          abstract: "abstract"
+          source_id: "arxiv_id"
+          source: "'arxiv'"
+          venue: "primary_category"
+          pdf_links: "pdf_url|wrap_list"
+
+      # Map canonical parameter names to tool-specific names
+      parameter_mapping:
+        query: "query"              # canonical -> tool param
+        max_papers: "max_results"   # canonical -> tool param
+        recency_years: "starting_year"  # canonical -> tool param (requires conversion)
+        slug: null                  # not supported - ignore
+        run_id: null                # not supported - ignore
+
+      prompt_snippet: |
+        Use `search_arxiv` to search arXiv for preprints and recent research.
+        - Excellent for AI/ML, physics, math, CS, and other technical fields
+        - Returns metadata including abstracts and PDF URLs
+        - arXiv is FREE and has cutting-edge research before peer review
+        - Example: search_arxiv(query="transformer attention mechanisms", max_results=10)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "Natural language search query"
+        max_results:
+          type: "integer"
+          default: 10
+          description: "Maximum number of papers to return"
+        starting_year:
+          type: "integer"
+          required: false
+          description: "Only include papers published on or after this year"
+
+  read_tools:
+    # Read URL content (HTML, PDF, etc.) via Jina Reader
+    read_url:
+      server: "one_server"
+      mcp_tool_name: "read_url"
+      display_name: "Read URL"
+      description: "Fetch a URL and return contents in Markdown format. Handles HTML, PDF, etc. via Jina Reader API."
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `read_url` to fetch and read any URL content (HTML pages, PDFs).
+        - Converts web pages and PDFs to clean markdown
+        - Works with academic publisher sites, arXiv, etc.
+        - Example: read_url(url="https://arxiv.org/abs/2301.00001")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL to fetch and read"
+
+    # Read PDF content directly
+    read_pdf:
+      server: "one_server"
+      mcp_tool_name: "read_pdf"
+      display_name: "Read PDF"
+      description: "Fetch a PDF from a URL using a browser and return its text content."
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `read_pdf` to download and extract text from a PDF URL.
+        - Use when you have a direct PDF link
+        - Returns full text content of the PDF
+        - Example: read_pdf(url="https://arxiv.org/pdf/2301.00001.pdf")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "Direct URL to the PDF file"
+
+    # Query PDF content with questions (agent-based)
+    query_pdf:
+      server: "one_server"
+      mcp_tool_name: "query_pdf_content"
+      display_name: "Query PDF Content"
+      description: "Query questions against a PDF's content. Uses an agent to find answers without loading full text."
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `query_pdf_content` to ask specific questions about a PDF.
+        - More efficient than reading entire PDF when you have specific questions
+        - Agent-based extraction finds relevant passages
+        - Example: query_pdf_content(url="...", questions=["What methods were used?", "What were the main findings?"])
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL to the PDF file"
+        questions:
+          type: "array"
+          required: true
+          description: "List of questions to answer from the PDF"
+
+  utility_tools:
+    # PubMed availability check
+    check_pubmed:
+      server: "one_server"
+      mcp_tool_name: "check_pubmed_available"
+      display_name: "Check PubMed Availability"
+      description: "Check if PubMed API is accessible via the MCP server"
+      category: "utility"
+      enabled: true
+
+      response_format:
+        type: "boolean_string"
+
+    # Find PDF links on a page
+    find_pdf_links:
+      server: "one_server"
+      mcp_tool_name: "find_pdf_links"
+      display_name: "Find PDF Links"
+      description: "Find PDF download links on an HTML page using multiple strategies (meta tags, direct links, academic site patterns)."
+      category: "utility"
+      enabled: true
+
+      prompt_snippet: |
+        Use `find_pdf_links` to find PDF download URLs from an abstract/landing page.
+        - Extracts PDF links using multiple strategies
+        - Works with academic publishers (arXiv, bioRxiv, PubMed, Nature, Springer, etc.)
+        - Example: find_pdf_links(url="https://arxiv.org/abs/2301.00001")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL of the page to search for PDF links"
+
+    # Generate search queries via MCP tool (replaces hardcoded prompts)
+    generate_queries:
+      server: "one_server"
+      mcp_tool_name: "generate_queries_hypotheses"
+      display_name: "Generate Search Queries"
+      description: "Generate literature search queries optimized for hypothesis generation. Supports natural language (arXiv/Scholar) or boolean (PubMed) formats."
+      category: "query_generation"
+      enabled: true
+
+      prompt_snippet: |
+        Use `generate_queries_hypotheses` to create optimized search queries for a research goal.
+        - Supports "natural_language" format (for arXiv, Google Scholar)
+        - Supports "boolean" format (for PubMed with AND/OR/NOT)
+        - Example: generate_queries_hypotheses(research_goal="...", query_format="natural_language")
+
+      parameters:
+        research_goal:
+          type: "string"
+          required: true
+          description: "The research goal or question to generate queries for"
+        query_format:
+          type: "string"
+          default: "natural_language"
+          description: "Format: 'natural_language' (arXiv/Scholar) or 'boolean' (PubMed)"
+        seed:
+          type: "integer"
+          default: 0
+          description: "Random seed for reproducibility"
+
+# Workflow Configurations
+# Define which tools are available in each phase
+workflows:
+  # Literature review phase - MULTI-SOURCE configuration
+  literature_review:
+    # Multi-source: search both PubMed and arXiv
+    search_sources:
+      - tool: "pubmed_fulltext"
+        papers_per_query: 3
+        enabled: true
+        # PubMed returns fulltext directly, no content_tool needed
+
+      - tool: "arxiv_search"
+        papers_per_query: 3
+        enabled: true
+        # arXiv needs PDF content fetched separately
+        content_tool: "read_pdf"
+        content_url_field: "pdf_url"
+
+    # Strategy for combining results
+    multi_source_strategy: "parallel"
+    deduplicate_across_sources: true
+
+    # Availability check (optional - set to null to skip)
+    availability_check: "check_pubmed"
+
+    # Query generation (uses natural_language format for broader compatibility)
+    query_generation_tool: "generate_queries"
+    query_format: "natural_language"
+
+    # Fallback content tool (used if source doesn't specify one)
+    content_tool: "read_pdf"
+    content_url_field: "pdf_url"
+
+    # Additional tools available during literature review
+    read_tools:
+      - "read_url"
+      - "read_pdf"
+      - "query_pdf"
+    utility_tools:
+      - "find_pdf_links"
+
+  # Draft generation phase
+  draft_generation:
+    search_tools:
+      - "pubmed_fulltext"
+      - "arxiv_search"
+    read_tools:
+      - "query_pdf"
+
+  # Validation phase
+  validation:
+    search_tools:
+      - "pubmed_fulltext"
+      - "arxiv_search"
+    read_tools:
+      - "read_pdf"
+      - "query_pdf"
+
+# Global Settings
+settings:
+  auto_discover: true
+  merge_strategy: "replace"  # replace default tools entirely (multi-source mode)
+  allow_disable_builtins: true

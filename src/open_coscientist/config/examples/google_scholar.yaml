@@ -1,0 +1,220 @@
+# Google Scholar MCP Server Tool Configuration
+# Version 1.0
+#
+# This file configures Google Scholar as a literature source.
+# Google Scholar returns landing page URLs (not direct PDFs), so we use
+# pdf_discovery_tool to find PDF links before content retrieval.
+#
+# Requirements:
+# - SERPAPI_KEY environment variable for Google Scholar search
+# - arXiv MCP server running on port 8889 (provides find_pdf_links, read_pdf, etc.)
+#
+# Environment variables can be used with ${VAR} or ${VAR:-default} syntax.
+
+version: "1.0"
+
+# MCP Server Definitions
+servers:
+  # The arXiv MCP server also provides Google Scholar and utility tools
+  scholar_server:
+    url: "${ARXIV_MCP_SERVER_URL:-http://localhost:8889/mcp}"
+    transport: "streamable_http"
+    enabled: true
+
+# Tool Definitions
+tools:
+  search_tools:
+    # Google Scholar search via SerpAPI
+    search_google_scholar:
+      server: "scholar_server"
+      mcp_tool_name: "search_google_scholar"
+      display_name: "Google Scholar Search"
+      description: "Search Google Scholar for scholarly articles across all disciplines"
+      category: "search"
+      source_type: "academic"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "results"
+        is_dict: false
+        field_mapping:
+          title: "title"
+          url: "url"  # landing page URL, not PDF
+          authors: "authors"
+          year: "year"
+          abstract: "abstract"  # actually a snippet
+          source_id: "source_id"
+          source: "'google_scholar'"
+          venue: "venue"
+          citations: "citations"
+
+      # Map canonical parameter names to tool-specific names
+      parameter_mapping:
+        query: "query"
+        max_papers: "max_results"
+        recency_years: "starting_year"
+        slug: null
+        run_id: null
+
+      prompt_snippet: |
+        Use `search_google_scholar` to search Google Scholar for scholarly articles.
+        - Covers all academic disciplines
+        - Returns citation counts and publication metadata
+        - Note: Results include landing page URLs, not direct PDFs
+        - Example: search_google_scholar(query="climate change mitigation", max_results=10)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "Search query"
+        max_results:
+          type: "integer"
+          default: 10
+          description: "Maximum number of results to return"
+        starting_year:
+          type: "integer"
+          required: false
+          description: "Only include papers published on or after this year"
+        page:
+          type: "integer"
+          default: 0
+          description: "Page number (0-based)"
+
+  read_tools:
+    # Read URL content
+    read_url:
+      server: "scholar_server"
+      mcp_tool_name: "read_url"
+      display_name: "Read URL"
+      description: "Fetch a URL and return contents in Markdown format."
+      category: "read"
+      enabled: true
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL to fetch and read"
+
+    # Read PDF content directly
+    read_pdf:
+      server: "scholar_server"
+      mcp_tool_name: "read_pdf"
+      display_name: "Read PDF"
+      description: "Fetch a PDF from a URL and return its text content."
+      category: "read"
+      enabled: true
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "Direct URL to the PDF file"
+
+    # Query PDF content with questions
+    query_pdf:
+      server: "scholar_server"
+      mcp_tool_name: "query_pdf_content"
+      display_name: "Query PDF Content"
+      description: "Query questions against a PDF's content using an agent."
+      category: "read"
+      enabled: true
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL to the PDF file"
+        questions:
+          type: "array"
+          required: true
+          description: "List of questions to answer from the PDF"
+
+  utility_tools:
+    # Find PDF links on a landing page
+    find_pdf_links:
+      server: "scholar_server"
+      mcp_tool_name: "find_pdf_links"
+      display_name: "Find PDF Links"
+      description: "Find PDF download links on an HTML page (publisher sites, etc.)."
+      category: "utility"
+      enabled: true
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL of the page to search for PDF links"
+
+    # Generate search queries
+    generate_queries:
+      server: "scholar_server"
+      mcp_tool_name: "generate_queries_hypotheses"
+      display_name: "Generate Search Queries"
+      description: "Generate literature search queries optimized for hypothesis generation."
+      category: "query_generation"
+      enabled: true
+
+      parameters:
+        research_goal:
+          type: "string"
+          required: true
+          description: "The research goal or question to generate queries for"
+        query_format:
+          type: "string"
+          default: "natural_language"
+          description: "Format: 'natural_language' or 'boolean'"
+        seed:
+          type: "integer"
+          default: 0
+          description: "Random seed for reproducibility"
+
+# Workflow Configurations
+workflows:
+  literature_review:
+    # Single source mode using Google Scholar
+    primary_search: "search_google_scholar"
+
+    # No availability check for Google Scholar (relies on SerpAPI)
+    availability_check: null
+
+    # Query generation
+    query_generation_tool: "generate_queries"
+    query_format: "natural_language"
+
+    # Two-step content retrieval:
+    # Step 1: Discover PDF links from landing page URLs
+    pdf_discovery_tool: "find_pdf_links"
+    pdf_discovery_url_field: "url"  # Google Scholar returns landing page in 'url' field
+
+    # Step 2: Fetch PDF content from discovered links
+    content_tool: "read_pdf"
+    content_url_field: "pdf_url"  # populated by pdf_discovery_tool
+
+    read_tools:
+      - "read_url"
+      - "read_pdf"
+      - "query_pdf"
+    utility_tools:
+      - "find_pdf_links"
+
+  draft_generation:
+    search_tools:
+      - "search_google_scholar"
+    read_tools:
+      - "query_pdf"
+
+  validation:
+    search_tools:
+      - "search_google_scholar"
+    read_tools:
+      - "read_pdf"
+      - "query_pdf"
+
+# Global Settings
+settings:
+  auto_discover: true
+  merge_strategy: "replace"
+  allow_disable_builtins: true
