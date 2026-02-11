@@ -187,6 +187,8 @@ class SearchSourceConfig:
         enabled: Whether this source is enabled
         content_tool: Optional tool to fetch content (overrides workflow-level setting)
         content_url_field: Field containing content URL (overrides workflow-level setting)
+        pdf_discovery_tool: Optional tool to discover PDF links from landing page URL
+        pdf_discovery_url_field: Field containing the URL to pass to pdf_discovery_tool
     """
 
     tool: str
@@ -194,6 +196,9 @@ class SearchSourceConfig:
     enabled: bool = True
     content_tool: Optional[str] = None
     content_url_field: Optional[str] = None
+    # Two-step content retrieval: first discover PDF links, then fetch content
+    pdf_discovery_tool: Optional[str] = None  # e.g., "find_pdf_links"
+    pdf_discovery_url_field: Optional[str] = None  # e.g., "url" (landing page)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SearchSourceConfig":
@@ -207,6 +212,8 @@ class SearchSourceConfig:
             enabled=data.get("enabled", True),
             content_tool=data.get("content_tool"),
             content_url_field=data.get("content_url_field"),
+            pdf_discovery_tool=data.get("pdf_discovery_tool"),
+            pdf_discovery_url_field=data.get("pdf_discovery_url_field"),
         )
 
 
@@ -245,6 +252,11 @@ class WorkflowConfig:
     content_tool: Optional[str] = None
     content_url_field: str = "pdf_url"
 
+    # Two-step content retrieval: first discover PDF links from landing page
+    # Used for sources like Google Scholar that return landing page URLs, not direct PDFs
+    pdf_discovery_tool: Optional[str] = None  # e.g., "find_pdf_links"
+    pdf_discovery_url_field: str = "url"  # field containing landing page URL
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WorkflowConfig":
         """Create WorkflowConfig from dictionary."""
@@ -270,6 +282,8 @@ class WorkflowConfig:
             query_format=data.get("query_format", "boolean"),
             content_tool=data.get("content_tool"),
             content_url_field=data.get("content_url_field", "pdf_url"),
+            pdf_discovery_tool=data.get("pdf_discovery_tool"),
+            pdf_discovery_url_field=data.get("pdf_discovery_url_field", "url"),
         )
 
     def get_enabled_search_sources(self) -> List[SearchSourceConfig]:

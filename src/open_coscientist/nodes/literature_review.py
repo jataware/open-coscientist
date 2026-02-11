@@ -499,6 +499,106 @@ async def literature_review_node(state: WorkflowState) -> Dict[str, Any]:
             all_paper_metadata.update(result_data)
 
     # ===========================================
+    # phase 2.4: discover PDF links for sources that return landing pages
+    # ===========================================
+    # For sources like Google Scholar that return landing page URLs instead of direct PDF links,
+    # we need to call a pdf_discovery_tool (e.g., find_pdf_links) first.
+    pdf_discovery_config: Dict[str, Tuple[str, str]] = {}  # source_tool_id -> (mcp_tool_name, url_field)
+
+    if is_multi_source and tool_registry:
+        for source in workflow.get_enabled_search_sources():
+            discovery_tool = source.pdf_discovery_tool or (workflow.pdf_discovery_tool if workflow else None)
+            discovery_url_field = source.pdf_discovery_url_field or (workflow.pdf_discovery_url_field if workflow else "url")
+            if discovery_tool:
+                tool_cfg = tool_registry.get_tool(discovery_tool)
+                if tool_cfg:
+                    pdf_discovery_config[source.tool] = (tool_cfg.mcp_tool_name, discovery_url_field)
+
+    elif tool_registry and workflow and workflow.pdf_discovery_tool:
+        tool_cfg = tool_registry.get_tool(workflow.pdf_discovery_tool)
+        if tool_cfg:
+            pdf_discovery_config["_default"] = (tool_cfg.mcp_tool_name, workflow.pdf_discovery_url_field)
+
+    if pdf_discovery_config:
+        # identify papers that need PDF discovery (have landing page URL but no pdf_url)
+        papers_needing_discovery = []
+        for pid, meta in all_paper_metadata.items():
+            if not isinstance(meta, dict) or meta.get("pdf_url"):
+                continue  # already has pdf_url
+
+            source_tool_id = paper_source_map.get(pid, "_default")
+            config = pdf_discovery_config.get(source_tool_id) or pdf_discovery_config.get("_default")
+            if not config:
+                continue
+
+            discovery_tool_name, url_field = config
+            landing_url = meta.get(url_field)
+            if landing_url:
+                papers_needing_discovery.append((pid, meta, discovery_tool_name, url_field))
+
+        if papers_needing_discovery:
+            logger.info(f"Phase 2.4: discovering PDF links for {len(papers_needing_discovery)} papers")
+
+            async def discover_pdf_links(
+                paper_id: str,
+                metadata: dict,
+                tool_name: str,
+                url_field: str,
+            ) -> Tuple[str, Optional[str]]:
+                """Discover PDF links from landing page URL."""
+                landing_url = metadata.get(url_field)
+                if not landing_url:
+                    return (paper_id, None)
+
+                try:
+                    logger.debug(f"Discovering PDF links for {paper_id}: {landing_url}")
+                    result = await mcp_client.call_tool(tool_name, url=landing_url)
+
+                    # parse result - find_pdf_links typically returns list of URLs
+                    pdf_url = None
+                    if isinstance(result, str):
+                        try:
+                            result_data = json.loads(result)
+                            if isinstance(result_data, list) and result_data:
+                                pdf_url = result_data[0]  # take first PDF link
+                            elif isinstance(result_data, dict):
+                                links = result_data.get("pdf_links") or result_data.get("links") or []
+                                if links:
+                                    pdf_url = links[0] if isinstance(links[0], str) else links[0].get("url")
+                        except json.JSONDecodeError:
+                            # might be a direct URL string
+                            if result.startswith("http"):
+                                pdf_url = result
+                    elif isinstance(result, list) and result:
+                        pdf_url = result[0] if isinstance(result[0], str) else result[0].get("url")
+
+                    if pdf_url:
+                        logger.debug(f"Found PDF link for {paper_id}: {pdf_url}")
+                    return (paper_id, pdf_url)
+
+                except Exception as e:
+                    logger.warning(f"Failed to discover PDF links for {paper_id}: {e}")
+                    return (paper_id, None)
+
+            # run PDF discovery in parallel
+            discovery_tasks = [
+                discover_pdf_links(pid, meta, tool_name, url_field)
+                for pid, meta, tool_name, url_field in papers_needing_discovery
+            ]
+            discovery_results = await asyncio.gather(*discovery_tasks)
+
+            # update metadata with discovered PDF links
+            pdf_discovered_count = 0
+            for paper_id, pdf_url in discovery_results:
+                if pdf_url and paper_id in all_paper_metadata:
+                    all_paper_metadata[paper_id]["pdf_url"] = pdf_url
+                    pdf_discovered_count += 1
+
+            logger.info(
+                f"PDF discovery complete: {pdf_discovered_count}/{len(papers_needing_discovery)} papers"
+            )
+
+    # ===========================================
     # phase 2.5: fetch content for papers with pdf_url but no fulltext
     # ===========================================
     # build content retrieval config per source (handles both single and multi-source modes)
