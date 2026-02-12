@@ -1,0 +1,245 @@
+# arXiv with Research-Focused PDF Analysis
+# Version 1.0
+#
+# Uses analyze_pdf_for_research tool which auto-generates questions
+# based on research context, providing more focused content extraction.
+#
+# Requirements:
+# - MCP server with arXiv tools and analyze_pdf_for_research on port 8889
+# - QUESTION_GEN_MODEL configured (default: gemini/gemini-2.0-flash)
+
+version: "1.0"
+
+# MCP Server Definitions
+servers:
+  reference_server:
+    url: "${MCP_SERVER_URL:-http://localhost:8888/mcp}"
+    transport: "streamable_http"
+    enabled: true
+  external_server:
+    url: "${EXTERNAL_MCP_SERVER_URL:-http://localhost:8889/mcp}"
+    transport: "streamable_http"
+    enabled: true
+
+# Tool Definitions
+tools:
+  search_tools:
+    # arXiv paper search
+    arxiv_search:
+      server: "external_server"
+      mcp_tool_name: "search_arxiv"
+      display_name: "arXiv Search"
+      description: "Search arXiv for preprints and recent research"
+      category: "search"
+      source_type: "preprint"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "results"
+        is_dict: false
+        field_mapping:
+          title: "title"
+          url: "url"
+          authors: "authors"
+          year: "year"
+          abstract: "abstract"
+          source_id: "arxiv_id"
+          source: "'arxiv'"
+          venue: "primary_category"
+          pdf_links: "pdf_url|wrap_list"
+
+      parameter_mapping:
+        query: "query"
+        max_papers: "max_results"
+        recency_years: "starting_year"
+        slug: null
+        run_id: null
+
+      prompt_snippet: |
+        Use `search_arxiv` to search arXiv for preprints and recent research.
+        - Excellent for AI/ML, physics, math, CS, and other technical fields
+        - Returns metadata including abstracts and PDF URLs
+        - Example: search_arxiv(query="transformer attention mechanisms", max_results=10)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "Natural language search query"
+        max_results:
+          type: "integer"
+          default: 10
+          description: "Maximum number of papers to return"
+        starting_year:
+          type: "integer"
+          required: false
+          description: "Only include papers published on or after this year"
+
+  read_tools:
+    # Research-focused PDF analysis with auto-generated questions
+    analyze_pdf:
+      server: "reference_server"
+      mcp_tool_name: "analyze_pdf_for_research"
+      display_name: "Analyze PDF for Research"
+      description: "Analyze PDF with auto-generated research-relevant questions"
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `analyze_pdf_for_research` to analyze PDFs with context-aware questions.
+        - Automatically generates questions based on research goal
+        - More focused than full text extraction
+        - Example: analyze_pdf_for_research(url="...", research_goal="...")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "Direct URL to the PDF file"
+        research_goal:
+          type: "string"
+          required: true
+          description: "Research goal to guide question generation"
+        focus_areas:
+          type: "array"
+          required: false
+          description: "Specific aspects to focus on"
+
+    # Standard PDF reading (fallback)
+    read_pdf:
+      server: "external_server"
+      mcp_tool_name: "read_pdf"
+      display_name: "Read PDF"
+      description: "Fetch a PDF from a URL and return its text content."
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `read_pdf` to download and extract text from a PDF URL.
+        - Use when you need full text content
+        - Example: read_pdf(url="https://arxiv.org/pdf/2301.00001.pdf")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "Direct URL to the PDF file"
+
+  utility_tools:
+    # Find PDF links on a page
+    find_pdf_links:
+      server: "external_server"
+      mcp_tool_name: "find_pdf_links"
+      display_name: "Find PDF Links"
+      description: "Find PDF download links on an HTML page."
+      category: "utility"
+      enabled: true
+
+      prompt_snippet: |
+        Use `find_pdf_links` to find PDF download URLs from an abstract/landing page.
+        - Works with academic publishers (arXiv, bioRxiv, Nature, Springer, etc.)
+        - Example: find_pdf_links(url="https://arxiv.org/abs/2301.00001")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL of the page to search for PDF links"
+
+    # Generate search queries via MCP tool
+    generate_queries:
+      server: "external_server"
+      mcp_tool_name: "generate_queries_hypotheses"
+      display_name: "Generate Search Queries"
+      description: "Generate literature search queries optimized for hypothesis generation."
+      category: "query_generation"
+      enabled: true
+
+      prompt_snippet: |
+        Use `generate_queries_hypotheses` to create optimized search queries.
+        - Supports "natural_language" format for arXiv
+        - Example: generate_queries_hypotheses(research_goal="...", query_format="natural_language")
+
+      parameters:
+        research_goal:
+          type: "string"
+          required: true
+          description: "The research goal or question to generate queries for"
+        query_format:
+          type: "string"
+          default: "natural_language"
+          description: "Format: 'natural_language' for arXiv or 'boolean' for PubMed"
+        seed:
+          type: "integer"
+          default: 0
+          description: "Random seed for reproducibility"
+
+# Workflow Configurations
+workflows:
+  literature_review:
+    # Single source: arXiv with research-focused analysis
+    search_sources:
+      - tool: "arxiv_search"
+        papers_per_query: 5
+        enabled: true
+        # Use research-focused PDF analysis instead of full text extraction
+        content_tool: "analyze_pdf"
+        content_url_field: "pdf_url"
+        # Pass research context to the content tool
+        # {research_goal} is substituted at runtime from workflow state
+        content_params:
+          research_goal: "{research_goal}"
+          focus_areas:
+            - "methodology"
+            - "key findings"
+            - "limitations"
+
+    # Strategy for combining results
+    multi_source_strategy: "parallel"
+    deduplicate_across_sources: true
+
+    # No availability check (no PubMed)
+    availability_check: null
+
+    # Query generation
+    query_generation_tool: "generate_queries"
+    query_format: "natural_language"
+
+    # Fallback content tool (uses research-focused analysis by default)
+    content_tool: "analyze_pdf"
+    content_url_field: "pdf_url"
+    content_params:
+      research_goal: "{research_goal}"
+      focus_areas:
+        - "methodology"
+        - "key findings"
+        - "limitations"
+
+    # Additional tools
+    read_tools:
+      - "analyze_pdf"
+      - "read_pdf"
+    utility_tools:
+      - "find_pdf_links"
+
+  # Draft generation phase
+  draft_generation:
+    search_tools:
+      - "arxiv_search"
+    read_tools:
+      - "analyze_pdf"
+
+  # Validation phase
+  validation:
+    search_tools:
+      - "arxiv_search"
+    read_tools:
+      - "read_pdf"
+      - "analyze_pdf"
+
+# Global Settings
+settings:
+  auto_discover: true
+  merge_strategy: "replace"
+  allow_disable_builtins: true

@@ -43,6 +43,7 @@ from .models import Hypothesis, HypothesisReview, ExecutionMetrics
 from .state import WorkflowState, WorkflowConfig
 from .cache import clear_cache, get_cache_stats, clear_node_cache, get_node_cache_stats
 from .console import ConsoleReporter
+from .config import ToolRegistry, get_tool_registry
 
 __version__ = "0.1.0"
 __all__ = [
@@ -57,4 +58,6 @@ __all__ = [
     "get_cache_stats",
     "clear_node_cache",
     "get_node_cache_stats",
+    "ToolRegistry",
+    "get_tool_registry",
 ]

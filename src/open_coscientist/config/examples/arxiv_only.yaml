@@ -1,0 +1,171 @@
+# arXiv-Only MCP Server Tool Configuration
+#
+# This file configures arXiv as the sole literature source (no PubMed).
+# Use this when you only have the arXiv MCP server running.
+#
+# Environment variables can be used with ${VAR} or ${VAR:-default} syntax.
+
+version: "1.0"
+
+# MCP Server Definitions
+servers:
+  arxiv_server:
+    url: "${ARXIV_MCP_SERVER_URL:-http://localhost:8889/mcp}"
+    transport: "streamable_http"
+    enabled: true
+
+# Tool Definitions
+tools:
+  search_tools:
+    # arXiv paper search
+    arxiv_search:
+      server: "arxiv_server"
+      mcp_tool_name: "search_arxiv"
+      display_name: "arXiv Search"
+      description: "Search arXiv for preprints and recent research (especially strong for AI/ML, physics, math, CS)"
+      category: "search"
+      source_type: "preprint"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "results"
+        is_dict: false
+        field_mapping:
+          title: "title"
+          url: "url"
+          authors: "authors"
+          year: "year"
+          abstract: "abstract"
+          source_id: "arxiv_id"
+          source: "'arxiv'"
+          venue: "primary_category"
+          pdf_links: "pdf_url|wrap_list"
+
+      parameter_mapping:
+        query: "query"
+        max_papers: "max_results"
+        recency_years: "starting_year"
+        slug: null
+        run_id: null
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "Natural language search query"
+        max_results:
+          type: "integer"
+          default: 10
+          description: "Maximum number of papers to return"
+        starting_year:
+          type: "integer"
+          required: false
+          description: "Only include papers published on or after this year"
+
+  read_tools:
+    read_url:
+      server: "arxiv_server"
+      mcp_tool_name: "read_url"
+      display_name: "Read URL"
+      description: "Fetch a URL and return contents in Markdown format."
+      category: "read"
+      enabled: true
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL to fetch and read"
+
+    read_pdf:
+      server: "arxiv_server"
+      mcp_tool_name: "read_pdf"
+      display_name: "Read PDF"
+      description: "Fetch a PDF from a URL and return its text content."
+      category: "read"
+      enabled: true
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "Direct URL to the PDF file"
+
+  utility_tools:
+    find_pdf_links:
+      server: "arxiv_server"
+      mcp_tool_name: "find_pdf_links"
+      display_name: "Find PDF Links"
+      description: "Find PDF download links on an HTML page."
+      category: "utility"
+      enabled: true
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL of the page to search for PDF links"
+
+    generate_queries:
+      server: "arxiv_server"
+      mcp_tool_name: "generate_queries_hypotheses"
+      display_name: "Generate Search Queries"
+      description: "Generate literature search queries optimized for hypothesis generation."
+      category: "query_generation"
+      enabled: true
+
+      parameters:
+        research_goal:
+          type: "string"
+          required: true
+          description: "The research goal or question to generate queries for"
+        query_format:
+          type: "string"
+          default: "natural_language"
+          description: "Format: 'natural_language' or 'boolean'"
+        seed:
+          type: "integer"
+          default: 0
+          description: "Random seed for reproducibility"
+
+# Workflow Configurations
+workflows:
+  literature_review:
+    # Single source mode using primary_search
+    primary_search: "arxiv_search"
+
+    # No availability check needed for arXiv
+    availability_check: null
+
+    # Use MCP tool for query generation
+    query_generation_tool: "generate_queries"
+    query_format: "natural_language"
+
+    # Content retrieval for arXiv papers (they have pdf_url but no embedded fulltext)
+    content_tool: "read_pdf"
+    content_url_field: "pdf_url"
+
+    read_tools:
+      - "read_url"
+      - "read_pdf"
+    utility_tools:
+      - "find_pdf_links"
+
+  draft_generation:
+    search_tools:
+      - "arxiv_search"
+    read_tools:
+      - "read_pdf"
+
+  validation:
+    search_tools:
+      - "arxiv_search"
+    read_tools:
+      - "read_pdf"
+
+# Global Settings
+settings:
+  auto_discover: true
+  merge_strategy: "replace"
+  allow_disable_builtins: true
