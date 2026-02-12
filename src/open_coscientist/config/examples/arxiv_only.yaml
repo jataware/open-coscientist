@@ -92,24 +92,6 @@ tools:
           required: true
           description: "Direct URL to the PDF file"
 
-    query_pdf:
-      server: "arxiv_server"
-      mcp_tool_name: "query_pdf_content"
-      display_name: "Query PDF Content"
-      description: "Query questions against a PDF's content."
-      category: "read"
-      enabled: true
-
-      parameters:
-        url:
-          type: "string"
-          required: true
-          description: "URL to the PDF file"
-        questions:
-          type: "array"
-          required: true
-          description: "List of questions to answer from the PDF"
-
   utility_tools:
     find_pdf_links:
       server: "arxiv_server"
@@ -167,7 +149,6 @@ workflows:
     read_tools:
       - "read_url"
       - "read_pdf"
-      - "query_pdf"
     utility_tools:
       - "find_pdf_links"
 
@@ -175,14 +156,13 @@ workflows:
     search_tools:
       - "arxiv_search"
     read_tools:
-      - "query_pdf"
+      - "read_pdf"
 
   validation:
     search_tools:
       - "arxiv_search"
     read_tools:
       - "read_pdf"
-      - "query_pdf"
 
 # Global Settings
 settings:

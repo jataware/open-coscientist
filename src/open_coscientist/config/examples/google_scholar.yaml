@@ -113,25 +113,6 @@ tools:
           required: true
           description: "Direct URL to the PDF file"
 
-    # Query PDF content with questions
-    query_pdf:
-      server: "scholar_server"
-      mcp_tool_name: "query_pdf_content"
-      display_name: "Query PDF Content"
-      description: "Query questions against a PDF's content using an agent."
-      category: "read"
-      enabled: true
-
-      parameters:
-        url:
-          type: "string"
-          required: true
-          description: "URL to the PDF file"
-        questions:
-          type: "array"
-          required: true
-          description: "List of questions to answer from the PDF"
-
   utility_tools:
     # Find PDF links on a landing page
     find_pdf_links:
@@ -196,7 +177,6 @@ workflows:
     read_tools:
       - "read_url"
       - "read_pdf"
-      - "query_pdf"
     utility_tools:
       - "find_pdf_links"
 
@@ -204,14 +184,13 @@ workflows:
     search_tools:
       - "search_google_scholar"
     read_tools:
-      - "query_pdf"
+      - "read_pdf"
 
   validation:
     search_tools:
       - "search_google_scholar"
     read_tools:
       - "read_pdf"
-      - "query_pdf"
 
 # Global Settings
 settings:

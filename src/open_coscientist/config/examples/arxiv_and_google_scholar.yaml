@@ -169,30 +169,6 @@ tools:
           required: true
           description: "Direct URL to the PDF file"
 
-    # Query PDF content with questions
-    query_pdf:
-      server: "external_server"
-      mcp_tool_name: "query_pdf_content"
-      display_name: "Query PDF Content"
-      description: "Query questions against a PDF's content."
-      category: "read"
-      enabled: true
-
-      prompt_snippet: |
-        Use `query_pdf_content` to ask specific questions about a PDF.
-        - More efficient than reading entire PDF when you have specific questions
-        - Example: query_pdf_content(url="...", questions=["What methods were used?"])
-
-      parameters:
-        url:
-          type: "string"
-          required: true
-          description: "URL to the PDF file"
-        questions:
-          type: "array"
-          required: true
-          description: "List of questions to answer from the PDF"
-
   utility_tools:
     # Find PDF links on a page
     find_pdf_links:
@@ -280,7 +256,6 @@ workflows:
     read_tools:
       - "read_url"
       - "read_pdf"
-      - "query_pdf"
     utility_tools:
       - "find_pdf_links"
 
@@ -290,7 +265,7 @@ workflows:
       - "arxiv_search"
       - "google_scholar_search"
     read_tools:
-      - "query_pdf"
+      - "read_pdf"
 
   # Validation phase
   validation:
@@ -299,7 +274,6 @@ workflows:
       - "google_scholar_search"
     read_tools:
       - "read_pdf"
-      - "query_pdf"
 
 # Global Settings
 settings:
