@@ -77,9 +77,9 @@ async def generate_with_tools(state: WorkflowState, count: int) -> List[Hypothes
 
     logger.info(f"Phase 1 complete: drafted {len(draft_hyps)} hypotheses")
 
-    # Phase 2: Validate and refine drafts (searches for novelty)
+    # Phase 2: Validate and refine drafts (searches for novelty, with tool access)
     hypotheses = await validate_hypotheses(
-        state=state, draft_hypotheses=draft_hyps, mcp_client=mcp_client
+        state=state, draft_hypotheses=draft_hyps, mcp_client=mcp_client, tool_registry=tool_registry
     )
 
     logger.info(f"Phase 2 complete: validated {len(hypotheses)} hypotheses")

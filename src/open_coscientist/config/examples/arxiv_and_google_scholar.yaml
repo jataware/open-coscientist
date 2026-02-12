@@ -1,0 +1,308 @@
+# arXiv + Google Scholar Configuration
+# Version 1.0
+#
+# Uses external MCP server (port 8889) for arXiv and Google Scholar.
+# Replaces default PubMed configuration entirely.
+#
+# Requirements:
+# - MCP server with arXiv and Google Scholar tools on port 8889
+# - SERPAPI_KEY for Google Scholar (configured in your MCP server)
+
+version: "1.0"
+
+# MCP Server Definitions
+servers:
+  external_server:
+    url: "${EXTERNAL_MCP_SERVER_URL:-http://localhost:8889/mcp}"
+    transport: "streamable_http"
+    enabled: true
+
+# Tool Definitions
+tools:
+  search_tools:
+    # arXiv paper search
+    arxiv_search:
+      server: "external_server"
+      mcp_tool_name: "search_arxiv"
+      display_name: "arXiv Search"
+      description: "Search arXiv for preprints and recent research (especially strong for AI/ML, physics, math, CS)"
+      category: "search"
+      source_type: "preprint"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "results"
+        is_dict: false
+        field_mapping:
+          title: "title"
+          url: "url"
+          authors: "authors"
+          year: "year"
+          abstract: "abstract"
+          source_id: "arxiv_id"
+          source: "'arxiv'"
+          venue: "primary_category"
+          pdf_links: "pdf_url|wrap_list"
+
+      parameter_mapping:
+        query: "query"
+        max_papers: "max_results"
+        recency_years: "starting_year"
+        slug: null
+        run_id: null
+
+      prompt_snippet: |
+        Use `search_arxiv` to search arXiv for preprints and recent research.
+        - Excellent for AI/ML, physics, math, CS, and other technical fields
+        - Returns metadata including abstracts and PDF URLs
+        - arXiv is FREE and has cutting-edge research before peer review
+        - Example: search_arxiv(query="transformer attention mechanisms", max_results=10)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "Natural language search query"
+        max_results:
+          type: "integer"
+          default: 10
+          description: "Maximum number of papers to return"
+        starting_year:
+          type: "integer"
+          required: false
+          description: "Only include papers published on or after this year"
+
+    # Google Scholar search
+    google_scholar_search:
+      server: "external_server"
+      mcp_tool_name: "search_google_scholar"
+      display_name: "Google Scholar Search"
+      description: "Search Google Scholar for scholarly articles across all disciplines"
+      category: "search"
+      source_type: "academic"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "results"
+        is_dict: false
+        field_mapping:
+          title: "title"
+          url: "url"
+          authors: "authors"
+          year: "year"
+          abstract: "abstract"
+          source_id: "source_id"
+          source: "'google_scholar'"
+          venue: "venue"
+          citations: "citations"
+
+      parameter_mapping:
+        query: "query"
+        max_papers: "max_results"
+        recency_years: "starting_year"
+        slug: null
+        run_id: null
+
+      prompt_snippet: |
+        Use `search_google_scholar` to search Google Scholar for scholarly articles.
+        - Covers all academic disciplines
+        - Returns citation counts and publication metadata
+        - Note: Results include landing page URLs, not direct PDFs
+        - Example: search_google_scholar(query="climate change mitigation", max_results=10)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "Search query"
+        max_results:
+          type: "integer"
+          default: 10
+          description: "Maximum number of results to return"
+        starting_year:
+          type: "integer"
+          required: false
+          description: "Only include papers published on or after this year"
+
+  read_tools:
+    # Read URL content (HTML, PDF, etc.)
+    read_url:
+      server: "external_server"
+      mcp_tool_name: "read_url"
+      display_name: "Read URL"
+      description: "Fetch a URL and return contents in Markdown format."
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `read_url` to fetch and read any URL content (HTML pages, PDFs).
+        - Converts web pages and PDFs to clean markdown
+        - Works with academic publisher sites, arXiv, etc.
+        - Example: read_url(url="https://arxiv.org/abs/2301.00001")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL to fetch and read"
+
+    # Read PDF content directly
+    read_pdf:
+      server: "external_server"
+      mcp_tool_name: "read_pdf"
+      display_name: "Read PDF"
+      description: "Fetch a PDF from a URL and return its text content."
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `read_pdf` to download and extract text from a PDF URL.
+        - Use when you have a direct PDF link
+        - Returns full text content of the PDF
+        - Example: read_pdf(url="https://arxiv.org/pdf/2301.00001.pdf")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "Direct URL to the PDF file"
+
+    # Query PDF content with questions
+    query_pdf:
+      server: "external_server"
+      mcp_tool_name: "query_pdf_content"
+      display_name: "Query PDF Content"
+      description: "Query questions against a PDF's content."
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `query_pdf_content` to ask specific questions about a PDF.
+        - More efficient than reading entire PDF when you have specific questions
+        - Example: query_pdf_content(url="...", questions=["What methods were used?"])
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL to the PDF file"
+        questions:
+          type: "array"
+          required: true
+          description: "List of questions to answer from the PDF"
+
+  utility_tools:
+    # Find PDF links on a page
+    find_pdf_links:
+      server: "external_server"
+      mcp_tool_name: "find_pdf_links"
+      display_name: "Find PDF Links"
+      description: "Find PDF download links on an HTML page."
+      category: "utility"
+      enabled: true
+
+      prompt_snippet: |
+        Use `find_pdf_links` to find PDF download URLs from an abstract/landing page.
+        - Works with academic publishers (arXiv, bioRxiv, Nature, Springer, etc.)
+        - Example: find_pdf_links(url="https://arxiv.org/abs/2301.00001")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL of the page to search for PDF links"
+
+    # Generate search queries via MCP tool
+    generate_queries:
+      server: "external_server"
+      mcp_tool_name: "generate_queries_hypotheses"
+      display_name: "Generate Search Queries"
+      description: "Generate literature search queries optimized for hypothesis generation."
+      category: "query_generation"
+      enabled: true
+
+      prompt_snippet: |
+        Use `generate_queries_hypotheses` to create optimized search queries.
+        - Supports "natural_language" format (for arXiv, Google Scholar)
+        - Example: generate_queries_hypotheses(research_goal="...", query_format="natural_language")
+
+      parameters:
+        research_goal:
+          type: "string"
+          required: true
+          description: "The research goal or question to generate queries for"
+        query_format:
+          type: "string"
+          default: "natural_language"
+          description: "Format: 'natural_language' (arXiv/Scholar) or 'boolean' (PubMed)"
+        seed:
+          type: "integer"
+          default: 0
+          description: "Random seed for reproducibility"
+
+# Workflow Configurations
+workflows:
+  literature_review:
+    # Multi-source: arXiv and Google Scholar
+    search_sources:
+      - tool: "arxiv_search"
+        papers_per_query: 3
+        enabled: true
+        content_tool: "read_pdf"
+        content_url_field: "pdf_url"
+
+      - tool: "google_scholar_search"
+        papers_per_query: 3
+        enabled: true
+        pdf_discovery_tool: "find_pdf_links"
+        pdf_discovery_url_field: "url"
+        content_tool: "read_pdf"
+        content_url_field: "pdf_url"
+
+    # Strategy for combining results
+    multi_source_strategy: "parallel"
+    deduplicate_across_sources: true
+
+    # No availability check (no PubMed)
+    availability_check: null
+
+    # Query generation
+    query_generation_tool: "generate_queries"
+    query_format: "natural_language"
+
+    # Fallback content tool
+    content_tool: "read_pdf"
+    content_url_field: "pdf_url"
+
+    # Additional tools
+    read_tools:
+      - "read_url"
+      - "read_pdf"
+      - "query_pdf"
+    utility_tools:
+      - "find_pdf_links"
+
+  # Draft generation phase
+  draft_generation:
+    search_tools:
+      - "arxiv_search"
+      - "google_scholar_search"
+    read_tools:
+      - "query_pdf"
+
+  # Validation phase
+  validation:
+    search_tools:
+      - "arxiv_search"
+      - "google_scholar_search"
+    read_tools:
+      - "read_pdf"
+      - "query_pdf"
+
+# Global Settings
+settings:
+  auto_discover: true
+  merge_strategy: "replace"  # Replace default PubMed config entirely
+  allow_disable_builtins: true

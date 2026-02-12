@@ -66,4 +66,73 @@ The default configuration [../tools.yaml](../tools.yaml) provides a reference im
 - Simplified single-server configuration
 - Multi-source deduplication
 
+---
+
+### `arxiv_and_google_scholar.yaml`
+**Purpose:** arXiv + Google Scholar (no PubMed)
+**Use case:** AI/ML research combined with broad academic coverage
+**Requirements:**
+- MCP server with arXiv and Google Scholar tools on port 8889
+- SERPAPI_KEY for Google Scholar
+
+**Features:**
+- Replaces default PubMed config entirely (`merge_strategy: "replace"`)
+- Two-step PDF discovery for Google Scholar
+- Natural language query generation
+
+---
+
+### `arxiv_research_focused.yaml`
+**Purpose:** arXiv with research-focused PDF analysis
+**Use case:** When you want focused Q&A content instead of full text dumps
+**Requirements:**
+- MCP server with `search_arxiv` and `analyze_pdf_for_research` on port 8889
+
+**Features:**
+- **Research-focused content extraction** using `analyze_pdf_for_research` tool
+- **`content_params` with runtime substitution** - passes research context to content tool
+- Auto-generates questions based on research goal
+- More token-efficient than full text extraction
+
+**Key Configuration Pattern:**
+```yaml
+search_sources:
+  - tool: "arxiv_search"
+    content_tool: "analyze_pdf"
+    content_url_field: "pdf_url"
+    # Pass research context to the content tool
+    content_params:
+      research_goal: "{research_goal}"  # Substituted at runtime
+      focus_areas:
+        - "methodology"
+        - "key findings"
+```
+
+---
+
+## Content Parameters (`content_params`)
+
+The `content_params` feature allows passing extra parameters to content tools. This is useful for tools that need context beyond just the URL:
+
+### Supported Placeholders
+- `{research_goal}` - The current research goal from workflow state
+- `{focus_areas}` - List of focus areas (future: extracted from hypothesis categories)
+
+### Example Usage
+```yaml
+workflows:
+  literature_review:
+    content_tool: "analyze_pdf_for_research"
+    content_url_field: "pdf_url"
+    content_params:
+      research_goal: "{research_goal}"
+      focus_areas:
+        - "experimental methods"
+        - "quantitative results"
+```
+
+This is particularly useful with the `analyze_pdf_for_research` tool, which generates questions dynamically based on the research context rather than extracting full text.
+
+---
+
 See the [literature review tools](../../../../docs/literature_review_tools_configuration.md) documentation for a guide and schemas on this topic.

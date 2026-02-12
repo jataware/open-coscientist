@@ -977,6 +977,7 @@ def get_schema_for_prompt(prompt_name: str) -> Optional[Dict[str, Any]]:
         "literature_review_paper_analysis": LITERATURE_PAPER_ANALYSIS_SCHEMA,
         "hypothesis_novelty_analysis": HYPOTHESIS_NOVELTY_ANALYSIS_SCHEMA,
         "hypothesis_validation_synthesis": HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA,
+        "hypothesis_validation_synthesis_with_tools": HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA,
     }
 
     return schema_map.get(prompt_name)

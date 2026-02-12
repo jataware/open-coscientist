@@ -4,8 +4,74 @@ Schema definitions for tool configuration.
 Uses dataclasses to match existing codebase patterns.
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
+
+
+def resolve_content_params(
+    params: Dict[str, Any],
+    context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Resolve content params by substituting {placeholders} with context values.
+
+    Supports:
+        - {research_goal} - the current research goal
+        - {focus_areas} - list of focus areas (from hypothesis categories, etc.)
+        - Any other context key
+
+    Args:
+        params: Content params dict with potential {placeholder} values
+        context: Runtime context containing values to substitute
+
+    Returns:
+        Resolved params dict with placeholders replaced
+    """
+    if not params:
+        return {}
+
+    resolved = {}
+    placeholder_pattern = re.compile(r'\{(\w+)\}')
+
+    for key, value in params.items():
+        if isinstance(value, str):
+            # check for placeholders like {research_goal}
+            matches = placeholder_pattern.findall(value)
+            if matches:
+                resolved_value = value
+                for match in matches:
+                    if match in context:
+                        context_val = context[match]
+                        # handle full replacement vs partial
+                        if value == f"{{{match}}}":
+                            resolved_value = context_val
+                        else:
+                            resolved_value = resolved_value.replace(
+                                f"{{{match}}}",
+                                str(context_val) if not isinstance(context_val, str) else context_val
+                            )
+                resolved[key] = resolved_value
+            else:
+                resolved[key] = value
+        elif isinstance(value, list):
+            # resolve each item in list
+            resolved_list = []
+            for item in value:
+                if isinstance(item, str) and placeholder_pattern.search(item):
+                    matches = placeholder_pattern.findall(item)
+                    resolved_item = item
+                    for match in matches:
+                        if match in context:
+                            resolved_item = resolved_item.replace(f"{{{match}}}", str(context[match]))
+                    resolved_list.append(resolved_item)
+                else:
+                    resolved_list.append(item)
+            resolved[key] = resolved_list
+        else:
+            resolved[key] = value
+
+    return resolved
 
 
 @dataclass
@@ -187,6 +253,7 @@ class SearchSourceConfig:
         enabled: Whether this source is enabled
         content_tool: Optional tool to fetch content (overrides workflow-level setting)
         content_url_field: Field containing content URL (overrides workflow-level setting)
+        content_params: Extra parameters to pass to content tool (supports {research_goal} substitution)
         pdf_discovery_tool: Optional tool to discover PDF links from landing page URL
         pdf_discovery_url_field: Field containing the URL to pass to pdf_discovery_tool
     """
@@ -196,6 +263,7 @@ class SearchSourceConfig:
     enabled: bool = True
     content_tool: Optional[str] = None
     content_url_field: Optional[str] = None
+    content_params: Dict[str, Any] = field(default_factory=dict)
     # Two-step content retrieval: first discover PDF links, then fetch content
     pdf_discovery_tool: Optional[str] = None  # e.g., "find_pdf_links"
     pdf_discovery_url_field: Optional[str] = None  # e.g., "url" (landing page)
@@ -212,6 +280,7 @@ class SearchSourceConfig:
             enabled=data.get("enabled", True),
             content_tool=data.get("content_tool"),
             content_url_field=data.get("content_url_field"),
+            content_params=data.get("content_params", {}),
             pdf_discovery_tool=data.get("pdf_discovery_tool"),
             pdf_discovery_url_field=data.get("pdf_discovery_url_field"),
         )
@@ -251,6 +320,7 @@ class WorkflowConfig:
     # Can be overridden per-source in search_sources
     content_tool: Optional[str] = None
     content_url_field: str = "pdf_url"
+    content_params: Dict[str, Any] = field(default_factory=dict)
 
     # Two-step content retrieval: first discover PDF links from landing page
     # Used for sources like Google Scholar that return landing page URLs, not direct PDFs
@@ -282,6 +352,7 @@ class WorkflowConfig:
             query_format=data.get("query_format", "boolean"),
             content_tool=data.get("content_tool"),
             content_url_field=data.get("content_url_field", "pdf_url"),
+            content_params=data.get("content_params", {}),
             pdf_discovery_tool=data.get("pdf_discovery_tool"),
             pdf_discovery_url_field=data.get("pdf_discovery_url_field", "url"),
         )

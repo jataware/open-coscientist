@@ -41,6 +41,7 @@ from ..state import WorkflowState
 
 from .literature_review_helpers import (
     SearchConfig,
+    ContentToolConfig,
     extract_source_name,
     normalize_search_response,
     build_articles_from_metadata,
@@ -475,18 +476,29 @@ async def _phase2_4_discover_pdf_links(
 async def _fetch_paper_content(
     paper_id: str,
     metadata: Dict[str, Any],
-    tool_name: str,
-    url_field: str,
+    content_cfg: "ContentToolConfig",
     mcp_client: MCPToolClient,
+    runtime_context: Dict[str, Any],
 ) -> Tuple[str, Optional[str]]:
     """Fetch content for a single paper."""
-    content_url = metadata.get(url_field)
+    from ..config.schema import resolve_content_params
+
+    content_url = metadata.get(content_cfg.url_field)
     if not content_url:
         return (paper_id, None)
 
     try:
-        logger.debug(f"Fetching content for {paper_id} via {tool_name}: {content_url}")
-        result = await mcp_client.call_tool(tool_name, url=content_url)
+        # resolve content_params with runtime context
+        resolved_params = resolve_content_params(content_cfg.content_params, runtime_context)
+
+        # build tool call args: url is always required, add any resolved params
+        tool_args = {"url": content_url, **resolved_params}
+
+        logger.debug(f"Fetching content for {paper_id} via {content_cfg.mcp_tool_name}: {content_url}")
+        if resolved_params:
+            logger.debug(f"  with params: {list(resolved_params.keys())}")
+
+        result = await mcp_client.call_tool(content_cfg.mcp_tool_name, **tool_args)
         content = parse_content_result(result)
         if content:
             logger.debug(f"Retrieved {len(content)} chars for paper {paper_id}")
@@ -501,6 +513,7 @@ async def _phase2_5_fetch_content(
     paper_source_map: Dict[str, str],
     config: SearchConfig,
     mcp_client: MCPToolClient,
+    state: "WorkflowState",
 ) -> None:
     """Phase 2.5: Fetch content for papers with pdf_url but no fulltext."""
     content_config = build_content_config(
@@ -526,10 +539,16 @@ async def _phase2_5_fetch_content(
 
     logger.info(f"Phase 2.5: fetching content for {len(papers_needing_content)} papers")
 
+    # build runtime context for param resolution
+    runtime_context = {
+        "research_goal": state.get("research_goal", ""),
+        "focus_areas": [],  # could be extracted from hypothesis categories later
+    }
+
     # fetch in parallel
     tasks = [
-        _fetch_paper_content(pid, meta, tool_name, url_field, mcp_client)
-        for pid, meta, tool_name, url_field in papers_needing_content
+        _fetch_paper_content(pid, meta, content_cfg, mcp_client, runtime_context)
+        for pid, meta, content_cfg in papers_needing_content
     ]
     results = await asyncio.gather(*tasks)
 
@@ -744,7 +763,7 @@ async def literature_review_node(state: WorkflowState) -> Dict[str, Any]:
     await _phase2_4_discover_pdf_links(all_paper_metadata, paper_source_map, config, mcp_client)
 
     # phase 2.5: fetch content
-    await _phase2_5_fetch_content(all_paper_metadata, paper_source_map, config, mcp_client)
+    await _phase2_5_fetch_content(all_paper_metadata, paper_source_map, config, mcp_client, state)
 
     # check fulltext availability
     with_fulltext, without_fulltext = count_papers_with_fulltext(all_paper_metadata)

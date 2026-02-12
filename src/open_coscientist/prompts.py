@@ -835,6 +835,83 @@ def get_hypothesis_validation_synthesis_prompt(
     )
 
 
+def get_validation_synthesis_prompt_with_tools(
+    research_goal: str,
+    hypotheses_with_analyses: list[Dict[str, Any]],
+    articles: List[Any] | None = None,
+    articles_with_reasoning: str | None = None,
+    max_iterations: int = 8,
+    tool_registry: Optional[Any] = None,
+) -> Tuple[str, Optional[Dict[str, Any]]]:
+    """
+    Get prompt for validation synthesis with tool access.
+
+    This version includes tool instructions so the LLM can search for
+    additional papers when deciding to pivot hypotheses.
+
+    Args:
+        research_goal: The research goal
+        hypotheses_with_analyses: List of draft hypotheses with novelty analyses
+        articles: Optional list of Article objects for citation metadata
+        articles_with_reasoning: Literature review synthesis
+        max_iterations: Max tool iterations for the agent
+        tool_registry: Optional ToolRegistry for dynamic tool instructions
+    """
+    # get tool IDs for validation workflow
+    tool_ids = []
+    if tool_registry:
+        tool_ids = tool_registry.get_tools_for_workflow("validation")
+
+    # build dynamic tool instructions
+    tool_instructions = build_tool_instructions(tool_ids, tool_registry)
+
+    # format hypotheses with their novelty analyses (same as non-tool version)
+    hypotheses_text = []
+    for i, hyp_data in enumerate(hypotheses_with_analyses, 1):
+        draft = hyp_data.get("draft", {})
+        analyses = hyp_data.get("novelty_analyses", [])
+
+        hyp_section = f"""### draft hypothesis {i}
+**text:** {draft.get('text', 'Unknown')}
+**gap reasoning:** {draft.get('gap_reasoning', 'N/A')}
+**literature sources:** {draft.get('literature_sources', 'N/A')}
+
+**novelty analyses ({len(analyses)} papers examined):**
+"""
+
+        for j, analysis_data in enumerate(analyses, 1):
+            paper_meta = analysis_data.get("paper_metadata", {})
+            analysis = analysis_data.get("analysis", {})
+
+            paper_analysis = f"""
+**paper {j}:** {paper_meta.get('title', 'Unknown')} ({paper_meta.get('year', 'N/A')})
+- methods used: {analysis.get('methods_used', 'N/A')}
+- populations studied: {analysis.get('populations_studied', 'N/A')}
+- mechanisms investigated: {analysis.get('mechanisms_investigated', 'N/A')}
+- key findings: {analysis.get('key_findings', 'N/A')}
+- stated limitations: {analysis.get('stated_limitations', 'N/A')}
+- future work suggested: {analysis.get('future_work_suggested', 'N/A')}
+- **novelty assessment: {analysis.get('novelty_assessment', 'N/A')}**
+- overlap explanation: {analysis.get('overlap_explanation', 'N/A')}
+"""
+            hyp_section += paper_analysis
+
+        hypotheses_text.append(hyp_section)
+
+    variables = {
+        "research_goal": research_goal,
+        "hypotheses_with_analyses": "\n\n".join(hypotheses_text),
+        "hypotheses_count": len(hypotheses_with_analyses),
+        "articles_metadata": format_articles_metadata(articles or []),
+        "articles_with_reasoning": articles_with_reasoning
+        or "no literature review summary available.",
+        "max_iterations": max_iterations,
+        "tool_instructions": tool_instructions,
+    }
+
+    return load_prompt_with_schema("hypothesis_validation_synthesis_with_tools", variables)
+
+
 def get_debate_generation_prompt(
     research_goal: str,
     hypotheses_count: int,

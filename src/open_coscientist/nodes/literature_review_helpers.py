@@ -506,36 +506,56 @@ def parse_pdf_discovery_result(result: Any) -> Optional[str]:
 # =============================================================================
 
 
+@dataclass
+class ContentToolConfig:
+    """Configuration for a content retrieval tool."""
+
+    mcp_tool_name: str
+    url_field: str
+    content_params: Dict[str, Any]
+
+
 def build_content_config(
     workflow: Optional["WorkflowConfig"],
     tool_registry: Optional["ToolRegistry"],
     is_multi_source: bool,
-) -> Dict[str, Tuple[str, str]]:
+) -> Dict[str, ContentToolConfig]:
     """
     Build content retrieval configuration mapping.
 
     Returns:
-        Dict mapping source_tool_id -> (mcp_tool_name, url_field)
+        Dict mapping source_tool_id -> ContentToolConfig
     """
-    config: Dict[str, Tuple[str, str]] = {}
+    config: Dict[str, ContentToolConfig] = {}
 
     if is_multi_source and workflow and tool_registry:
         workflow_content_tool = workflow.content_tool
         workflow_url_field = workflow.content_url_field
+        workflow_content_params = workflow.content_params
 
         for source in workflow.get_enabled_search_sources():
             src_content_tool = source.content_tool or workflow_content_tool
             src_url_field = source.content_url_field or workflow_url_field
+            # merge workflow params with source-specific params (source takes priority)
+            src_params = {**workflow_content_params, **source.content_params}
 
             if src_content_tool:
                 tool_cfg = tool_registry.get_tool(src_content_tool)
                 if tool_cfg:
-                    config[source.tool] = (tool_cfg.mcp_tool_name, src_url_field)
+                    config[source.tool] = ContentToolConfig(
+                        mcp_tool_name=tool_cfg.mcp_tool_name,
+                        url_field=src_url_field,
+                        content_params=src_params,
+                    )
 
     elif tool_registry and workflow and workflow.content_tool:
         content_tool_cfg = tool_registry.get_tool(workflow.content_tool)
         if content_tool_cfg:
-            config["_default"] = (content_tool_cfg.mcp_tool_name, workflow.content_url_field)
+            config["_default"] = ContentToolConfig(
+                mcp_tool_name=content_tool_cfg.mcp_tool_name,
+                url_field=workflow.content_url_field,
+                content_params=workflow.content_params,
+            )
 
     return config
 
@@ -543,13 +563,13 @@ def build_content_config(
 def get_papers_needing_content(
     all_paper_metadata: Dict[str, Dict[str, Any]],
     paper_source_map: Dict[str, str],
-    content_config: Dict[str, Tuple[str, str]],
-) -> List[Tuple[str, Dict, str, str]]:
+    content_config: Dict[str, ContentToolConfig],
+) -> List[Tuple[str, Dict, ContentToolConfig]]:
     """
     Identify papers that need content retrieval.
 
     Returns:
-        List of (paper_id, metadata, tool_name, url_field) tuples
+        List of (paper_id, metadata, content_tool_config) tuples
     """
     papers = []
     for pid, meta in all_paper_metadata.items():
@@ -557,14 +577,13 @@ def get_papers_needing_content(
             continue
 
         source_tool_id = paper_source_map.get(pid, "_default")
-        config = content_config.get(source_tool_id) or content_config.get("_default")
-        if not config:
+        cfg = content_config.get(source_tool_id) or content_config.get("_default")
+        if not cfg:
             continue
 
-        tool_name, url_field = config
-        content_url = meta.get(url_field)
+        content_url = meta.get(cfg.url_field)
         if content_url:
-            papers.append((pid, meta, tool_name, url_field))
+            papers.append((pid, meta, cfg))
 
     return papers
 
