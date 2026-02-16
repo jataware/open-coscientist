@@ -23,6 +23,59 @@ from ...state import WorkflowState
 logger = logging.getLogger(__name__)
 
 
+def _match_papers_to_grounding(articles, literature_grounding):
+    """Match lit review articles against a hypothesis's literature_grounding text.
+
+    Only returns articles whose title appears (case-insensitive) in the
+    literature_grounding string, so each hypothesis gets only the papers
+    it actually cited — not all articles from the literature review.
+
+    Falls back to all used_in_analysis articles if literature_grounding
+    is empty or no titles match.
+    """
+    if not articles:
+        return []
+
+    analyzed = [
+        art for art in articles
+        if getattr(art, "used_in_analysis", False)
+    ]
+
+    # if we have grounding text, filter to only cited papers
+    if literature_grounding:
+        grounding_lower = literature_grounding.lower()
+        matched = []
+        seen = set()
+        for art in analyzed:
+            title = getattr(art, "title", "")
+            if not title:
+                continue
+            # match on substantial title fragments (first 40+ chars)
+            # to avoid false positives on short common words
+            title_key = title.lower().strip()
+            match_fragment = title_key[:60] if len(title_key) > 60 else title_key
+            if match_fragment in grounding_lower and title not in seen:
+                seen.add(title)
+                matched.append({
+                    "title": title,
+                    "url": getattr(art, "url", "") or "",
+                })
+
+        if matched:
+            return matched
+
+    # fallback: return all analyzed articles (better than empty)
+    seen = set()
+    papers = []
+    for art in analyzed:
+        title = getattr(art, "title", "")
+        url = getattr(art, "url", "") or ""
+        if (title, url) not in seen:
+            seen.add((title, url))
+            papers.append({"title": title, "url": url})
+    return papers
+
+
 async def _run_single_debate(
     state: WorkflowState,
     debate_id: Optional[int] = None,
@@ -63,6 +116,7 @@ async def _run_single_debate(
             is_final_turn=is_final,
             articles_with_reasoning=articles_with_reasoning,
             articles=state.get("articles"),
+            tool_registry=state.get("tool_registry"),
         )
 
         if is_final:
@@ -91,6 +145,11 @@ async def _run_single_debate(
             literature_grounding = hyp_data.get("literature_grounding")
             experiment = hyp_data.get("experiment")
 
+            # match lit review articles to this hypothesis's cited papers
+            papers_used = _match_papers_to_grounding(
+                state.get("articles"), literature_grounding
+            )
+
             hypothesis = Hypothesis(
                 text=hypothesis_text,
                 explanation=explanation,
@@ -100,6 +159,7 @@ async def _run_single_debate(
                 elo_rating=INITIAL_ELO_RATING,
                 generation_method="debate",
                 debate_id=debate_id,
+                papers_used=papers_used,
             )
 
             return hypothesis, transcript

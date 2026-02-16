@@ -1,6 +1,10 @@
 # Hypothesis Validation Synthesis
 
+{{domain_context}}
+
 You are validating draft hypotheses for novelty based on literature analysis.
+
+{{domain_generation_guidance}}
 
 ## Research Goal
 {{research_goal}}

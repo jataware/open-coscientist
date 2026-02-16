@@ -1,4 +1,9 @@
 # Ranking Agent
+
+{{domain_context}}
+
+{{domain_review_guidance}}
+
 An important abstraction in the co-scientist system is the notion of a tournament
 where different research proposals are evaluated and ranked enabling iterative improvements. The
 Ranking agent employs and orchestrates an Elo-based tournament [64] to assess and prioritize the

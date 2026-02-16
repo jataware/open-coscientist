@@ -59,6 +59,7 @@ async def judge_matchup(
     supervisor_guidance: Dict[str, Any] | None = None,
     run_id: str | None = None,
     matchup_index: int | None = None,
+    tool_registry: Any | None = None,
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Have LLM judge which hypothesis is superior.
@@ -131,6 +132,7 @@ async def judge_matchup(
         review_b=review_b,
         reflection_notes_a=reflection_notes_a,
         reflection_notes_b=reflection_notes_b,
+        tool_registry=tool_registry,
     )
 
     # save prompt to disk for debugging
@@ -240,8 +242,9 @@ async def ranking_node(state: WorkflowState) -> Dict[str, Any]:
     tournament_rounds = len(hypotheses) * 1
     logger.info(f"Running {tournament_rounds} tournament rounds")
 
-    # Get supervisor guidance from state
+    # Get supervisor guidance and tool registry from state
     supervisor_guidance = state.get("supervisor_guidance")
+    tool_registry = state.get("tool_registry")
 
     # Set deterministic random seed based on research goal and iteration
     # this ensures same inputs produce same tournament pairings for cache consistency
@@ -264,6 +267,7 @@ async def ranking_node(state: WorkflowState) -> Dict[str, Any]:
                 supervisor_guidance,
                 run_id=state.get("run_id"),
                 matchup_index=i,
+                tool_registry=tool_registry,
             )
             for i, (a, b) in enumerate(pairings)
         ]

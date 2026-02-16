@@ -32,6 +32,7 @@ class Hypothesis:
         literature_grounding: Explicit grounding in literature review with citations
         experiment: Practical experiment design to test the hypothesis
         novelty_validation: Summary of search queries used to validate novelty and findings (tool-based generation only)
+        papers_used: Structured list of papers actually read during generation [{"title": "...", "url": "..."}]
         score: Overall quality score (0-100)
         elo_rating: Elo rating from tournament selection
         reviews: List of reviews received
@@ -50,6 +51,7 @@ class Hypothesis:
     literature_grounding: Optional[str] = None
     experiment: Optional[str] = None
     novelty_validation: Optional[str] = None
+    papers_used: List[Dict[str, str]] = field(default_factory=list)
     score: float = 0.0
     elo_rating: int = 1200  # Starting Elo rating
     reviews: List[HypothesisReview] = field(default_factory=list)
@@ -82,6 +84,7 @@ class Hypothesis:
             "experiment": self.experiment,
             # "literature_review_used": self.literature_review_used,
             "novelty_validation": self.novelty_validation,
+            "papers_used": self.papers_used,
             "score": self.score,
             "elo_rating": self.elo_rating,
             "reviews": [

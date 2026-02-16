@@ -410,6 +410,43 @@ class Settings:
 
 
 @dataclass
+class PromptsConfig:
+    """
+    Domain-specific prompt customizations injected via {{domain_*}} placeholders.
+
+    All fields are optional. When absent, placeholders resolve to empty strings
+    and prompts behave identically to the defaults.
+
+    Attributes:
+        domain_context: Injected at the top of all prompts. Use for role framing,
+            terminology mappings, and domain description.
+        generation_guidance: Injected into generation prompts. Use for domain-specific
+            categories, hypothesis format requirements, and output expectations.
+        review_guidance: Injected into review and ranking prompts. Use for
+            domain-specific evaluation criteria.
+        evolution_guidance: Injected into evolution and meta-review prompts. Use for
+            domain-specific refinement priorities.
+    """
+
+    domain_context: str = ""
+    generation_guidance: str = ""
+    review_guidance: str = ""
+    evolution_guidance: str = ""
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PromptsConfig":
+        """Create PromptsConfig from dictionary."""
+        if not data:
+            return cls()
+        return cls(
+            domain_context=data.get("domain_context", ""),
+            generation_guidance=data.get("generation_guidance", ""),
+            review_guidance=data.get("review_guidance", ""),
+            evolution_guidance=data.get("evolution_guidance", ""),
+        )
+
+
+@dataclass
 class ToolsConfig:
     """
     Root configuration object containing all tool definitions.
@@ -422,6 +459,7 @@ class ToolsConfig:
     tools: Dict[str, Dict[str, ToolConfig]] = field(default_factory=dict)
     workflows: Dict[str, WorkflowConfig] = field(default_factory=dict)
     settings: Settings = field(default_factory=Settings)
+    prompts: PromptsConfig = field(default_factory=PromptsConfig)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ToolsConfig":
@@ -447,12 +485,16 @@ class ToolsConfig:
         # parse settings
         settings = Settings.from_dict(data.get("settings", {}))
 
+        # parse prompts
+        prompts = PromptsConfig.from_dict(data.get("prompts", {}))
+
         return cls(
             version=data.get("version", "1.0"),
             servers=servers,
             tools=tools,
             workflows=workflows,
             settings=settings,
+            prompts=prompts,
         )
 
     def get_tool(self, tool_id: str) -> Optional[ToolConfig]:

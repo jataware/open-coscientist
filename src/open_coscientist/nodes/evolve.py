@@ -108,6 +108,7 @@ async def evolve_single_hypothesis(
     articles_with_reasoning: str | None = None,
     run_id: str | None = None,
     hypothesis_index: int | None = None,
+    tool_registry: Any | None = None,
 ) -> Hypothesis:
     """
     Evolve a single hypothesis with strategically sampled context to prevent convergence.
@@ -206,17 +207,19 @@ async def evolve_single_hypothesis(
             )
             supervisor_guidance_text = "".join(guidance_sections)
 
-    # Build context-aware evolution prompt
-    prompt, schema = load_prompt_with_schema(
-        "evolution",
-        {
-            "original_hypothesis": hypothesis.text,
-            "review_feedback": review_feedback,
-            "meta_review_insights": meta_review_insights,
-            "supervisor_guidance": supervisor_guidance_text,
-            "articles_with_reasoning": articles_with_reasoning or "",
-        },
-    )
+    # Build context-aware evolution prompt with domain variables
+    from ..prompts import _get_domain_variables
+
+    variables = {
+        "original_hypothesis": hypothesis.text,
+        "review_feedback": review_feedback,
+        "meta_review_insights": meta_review_insights,
+        "supervisor_guidance": supervisor_guidance_text,
+        "articles_with_reasoning": articles_with_reasoning or "",
+    }
+    variables.update(_get_domain_variables(tool_registry))
+
+    prompt, schema = load_prompt_with_schema("evolution", variables)
 
     # Add critical diversity instruction
     other_hyps_formatted = "\n".join([f"- {text[:200]}..." for text in other_hypotheses_texts])
@@ -409,6 +412,7 @@ async def evolve_node(state: WorkflowState) -> Dict[str, Any]:
             articles_with_reasoning=state.get("articles_with_reasoning"),
             run_id=state.get("run_id"),
             hypothesis_index=i,
+            tool_registry=state.get("tool_registry"),
         )
         for i, hyp in enumerate(top_k)
     ]

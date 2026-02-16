@@ -93,6 +93,7 @@ async def meta_review_node(state: WorkflowState) -> Dict[str, Any]:
         all_reviews=reviews_text,
         supervisor_guidance=supervisor_guidance,
         instructions=None,  # for the future
+        tool_registry=state.get("tool_registry"),
     )
 
     # save prompt to disk for debugging

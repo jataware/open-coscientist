@@ -27,6 +27,7 @@ async def analyze_single_hypothesis(
     hypothesis_index: int,
     total_count: int,
     run_id: str | None = None,
+    tool_registry: Any | None = None,
 ) -> Optional[Dict[str, Any]]:
     """
     analyze a single hypothesis against literature observations.
@@ -46,7 +47,8 @@ async def analyze_single_hypothesis(
     # get reflection prompt
     prompt, schema = get_reflection_prompt(
         articles_with_reasoning=articles_with_reasoning,
-        hypothesis_text=hypothesis.text
+        hypothesis_text=hypothesis.text,
+        tool_registry=tool_registry,
     )
 
     # save prompt to disk for debugging
@@ -133,6 +135,7 @@ async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
     # analyze all hypotheses in parallel
     logger.info(f"Running {len(hypotheses)} reflection analyses in parallel")
 
+    tool_registry = state.get("tool_registry")
     analysis_tasks = [
         analyze_single_hypothesis(
             hypothesis=hyp,
@@ -141,6 +144,7 @@ async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
             hypothesis_index=i + 1,
             total_count=len(hypotheses),
             run_id=state.get("run_id"),
+            tool_registry=tool_registry,
         )
         for i, hyp in enumerate(hypotheses)
     ]

@@ -1,5 +1,7 @@
 You are an expert participating in a collaborative discourse concerning the generation of a {{attributes}} hypothesis. You will engage in a simulated discussion with other experts.
 
+{{domain_context}}
+
 The overarching objective of this discourse is to collaboratively develop a novel and robust {{attributes}} hypothesis.
 
 Research Goal: {{goal}}
@@ -9,6 +11,8 @@ Criteria for a high-quality hypothesis:
 
 Instructions:
 {{supervisor_guidance}}
+
+{{domain_generation_guidance}}
 
 ## Each Hypothesis Should:
 

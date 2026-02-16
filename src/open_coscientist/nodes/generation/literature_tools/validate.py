@@ -39,6 +39,62 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# tool names that indicate paper reading (used to extract papers_used)
+_READ_TOOL_NAMES = {"read_url", "read_pdf", "fetch_url", "get_pdf"}
+
+
+def _extract_papers_from_messages(messages):
+    """Extract papers read from tool call message history.
+
+    Scans messages for read-type tool calls (read_url, read_pdf, etc.)
+    and extracts URLs from their arguments. Deduplicates by URL.
+    """
+    papers = []
+    seen_urls = set()
+
+    for msg in messages:
+        tool_calls = msg.get("tool_calls", [])
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            name = fn.get("name", "")
+            if name not in _READ_TOOL_NAMES:
+                continue
+
+            # parse arguments to extract URL
+            args_str = fn.get("arguments", "{}")
+            try:
+                args = json.loads(args_str) if isinstance(args_str, str) else args_str
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+            url = args.get("url", "") or args.get("pdf_url", "")
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                papers.append({"title": "", "url": url})
+
+    return papers
+
+
+def _extract_papers_for_hypothesis(hypothesis_with_analyses):
+    """Extract papers from a single hypothesis's novelty analysis metadata.
+
+    Returns only the papers that were analyzed for this specific hypothesis,
+    not all papers across all hypotheses.
+    """
+    papers = []
+    seen = set()
+
+    for analysis in hypothesis_with_analyses.get("novelty_analyses", []):
+        meta = analysis.get("paper_metadata", {})
+        paper_id = meta.get("paper_id", "")
+        title = meta.get("title", "")
+        if paper_id and paper_id not in seen:
+            seen.add(paper_id)
+            papers.append({"title": title, "url": paper_id})
+
+    return papers
+
+
 async def validate_hypotheses(
     state: WorkflowState,
     draft_hypotheses: List[Dict[str, str]],
@@ -350,13 +406,19 @@ async def validate_hypotheses(
     )
 
     # create Hypothesis objects from synthesis
+    # output order matches hypotheses_with_analyses order (batched sequentially)
     hypotheses = []
-    for hyp_data in all_validated_hypotheses:
+    for i, hyp_data in enumerate(all_validated_hypotheses):
 
         hypothesis_text = hyp_data.get("hypothesis") or hyp_data.get("text", "")
         explanation = hyp_data.get("explanation")
         literature_grounding = hyp_data.get("literature_grounding")
         experiment = hyp_data.get("experiment")
+
+        # extract only the papers analyzed for THIS specific hypothesis
+        papers_used = []
+        if i < len(hypotheses_with_analyses):
+            papers_used = _extract_papers_for_hypothesis(hypotheses_with_analyses[i])
 
         hypothesis = Hypothesis(
             text=hypothesis_text,
@@ -367,6 +429,7 @@ async def validate_hypotheses(
             score=0.0,
             elo_rating=INITIAL_ELO_RATING,
             generation_method="literature_tools",
+            papers_used=papers_used,
         )
         hypotheses.append(hypothesis)
 

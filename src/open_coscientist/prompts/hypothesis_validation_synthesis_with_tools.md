@@ -1,6 +1,10 @@
 # Hypothesis Validation Synthesis (with Tool Access)
 
+{{domain_context}}
+
 You are validating draft hypotheses for novelty based on literature analysis. You have access to tools for searching additional papers and querying PDF content when needed.
+
+{{domain_generation_guidance}}
 
 ## Research Goal
 {{research_goal}}

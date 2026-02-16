@@ -1,0 +1,356 @@
+# Cybersecurity HYDRA Configuration
+# Version 1.0
+#
+# HYDRA: Hypothesis-driven Yield of Diverse Red-team Attacks
+#
+# Domain-specific configuration for offensive cybersecurity research.
+# Uses arXiv + Google Scholar for literature review via external MCP server.
+# Replaces default PubMed configuration entirely.
+#
+# Requirements:
+# - MCP server with arXiv, Google Scholar, and PDF tools on port 8889
+# - SERPAPI_KEY for Google Scholar (configured in your MCP server)
+
+version: "1.0"
+
+# Domain-Specific Prompt Customizations
+# These text blocks are injected into prompt templates via {{domain_*}} placeholders.
+prompts:
+  domain_context: |
+    ## Domain: Offensive Cybersecurity Research
+
+    You are a cybersecurity research scientist specializing in offensive security,
+    red-team operations, and adversarial techniques. Your audience includes
+    cyber operators, threat researchers, and defense analysts at organizations
+    like US Cyber Command (CYBERCOM), NSA, and DARPA.
+
+    Key terminology:
+    - "Hypothesis" in this context means a **threat hypothesis**: a novel attack
+      technique, exploitation method, or adversarial capability that could be
+      developed and tested.
+    - "Experiment" means a **proof-of-concept implementation** or red-team
+      exercise to validate the attack technique.
+    - Literature sources include academic security research, CVE databases,
+      threat intelligence reports, and offensive security publications.
+
+    Focus areas: vulnerability discovery, exploit development, evasion techniques,
+    lateral movement, persistence mechanisms, C2 infrastructure, supply chain
+    attacks, AI-assisted offensive operations, and emerging threat vectors.
+
+  generation_guidance: |
+    ## Cybersecurity Hypothesis Generation Guidance
+
+    ### Attack Categories to Consider
+    Generate hypotheses spanning diverse attack categories:
+    1. **Novel exploitation techniques** - new vulnerability classes, novel exploit primitives
+    2. **Evasion and stealth** - bypassing EDR/AV, living-off-the-land, fileless attacks
+    3. **AI-augmented attacks** - using ML/LLMs for reconnaissance, social engineering, or exploit generation
+    4. **Infrastructure attacks** - cloud, container, CI/CD pipeline, ICS/SCADA targeting
+    5. **Supply chain compromise** - dependency confusion, build system manipulation
+    6. **Post-exploitation innovation** - novel lateral movement, persistence, data exfiltration
+    7. **Protocol and cryptographic attacks** - side channels, implementation flaws, downgrade attacks
+
+    ### Hypothesis Format
+    Each threat hypothesis should follow:
+    "We hypothesize that [attack technique/method] can be developed to [achieve specific offensive capability],
+    exploiting [specific weakness/assumption] in [target system/protocol/defense]."
+
+    ### Diversity Requirements
+    - Span multiple attack categories above
+    - Mix known-technique-novel-application with genuinely novel techniques
+    - Include both short-term actionable and longer-term research hypotheses
+    - Consider different target environments (enterprise, cloud, mobile, IoT, ICS)
+
+  review_guidance: |
+    ## Cybersecurity Review Criteria
+
+    When evaluating threat hypotheses, prioritize:
+
+    1. **Operational feasibility** - Can this realistically be implemented by a skilled red team?
+       Consider required access level, tooling complexity, and operational constraints.
+    2. **Novelty over existing TTPs** - Does this go beyond known MITRE ATT&CK techniques?
+       Is it a genuinely new approach or a minor variation of known methods?
+    3. **Impact potential** - What is the blast radius? Could this affect high-value targets
+       (critical infrastructure, financial systems, defense networks)?
+    4. **Evasion potential** - How likely is this to bypass current detection capabilities
+       (EDR, SIEM rules, network monitoring)?
+    5. **Defensive value** - Does understanding this attack enable better defenses?
+       Purple team value is critical for responsible research.
+    6. **Ethical boundaries** - Does the hypothesis stay within responsible disclosure
+       and authorized testing frameworks?
+
+    Score lower for:
+    - Attacks that are trivially detectable by modern defenses
+    - Techniques that are merely repackaging known CVEs
+    - Hypotheses lacking specificity about the target or mechanism
+
+  evolution_guidance: |
+    ## Cybersecurity Evolution Priorities
+
+    When refining threat hypotheses:
+
+    1. **Increase technical specificity** - name specific protocols, software versions,
+       or architectural patterns being targeted
+    2. **Strengthen the attack chain** - ensure the hypothesis describes a complete
+       kill chain from initial access to objective, not just a single step
+    3. **Add evasion considerations** - how does the refined technique avoid detection?
+    4. **Clarify proof-of-concept scope** - what would a minimal PoC look like?
+       What test environment is needed?
+    5. **Consider defensive countermeasures** - what would a defender need to detect
+       or prevent this? This strengthens the purple team value.
+    6. **Maintain operational realism** - refined hypotheses should remain achievable
+       with realistic threat actor resources and access levels
+
+# MCP Server Definitions
+servers:
+  external_server:
+    url: "${EXTERNAL_MCP_SERVER_URL:-http://localhost:8889/mcp}"
+    transport: "streamable_http"
+    enabled: true
+
+# Tool Definitions
+tools:
+  search_tools:
+    arxiv_search:
+      server: "external_server"
+      mcp_tool_name: "search_arxiv"
+      display_name: "arXiv Search"
+      description: "Search arXiv for security research papers (strong for AI/ML security, cryptography, systems security)"
+      category: "search"
+      source_type: "preprint"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "results"
+        is_dict: false
+        field_mapping:
+          title: "title"
+          url: "url"
+          authors: "authors"
+          year: "year"
+          abstract: "abstract"
+          source_id: "arxiv_id"
+          source: "'arxiv'"
+          venue: "primary_category"
+          pdf_links: "pdf_url|wrap_list"
+
+      parameter_mapping:
+        query: "query"
+        max_papers: "max_results"
+        recency_years: "starting_year"
+        slug: null
+        run_id: null
+
+      prompt_snippet: |
+        Use `search_arxiv` to search arXiv for security research papers.
+        - Strong for AI/ML security, cryptography, systems security, network security
+        - Returns metadata including abstracts and PDF URLs
+        - Example: search_arxiv(query="adversarial attacks neural network evasion", max_results=10)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "Natural language search query"
+        max_results:
+          type: "integer"
+          default: 10
+          description: "Maximum number of papers to return"
+        starting_year:
+          type: "integer"
+          required: false
+          description: "Only include papers published on or after this year"
+
+    google_scholar_search:
+      server: "external_server"
+      mcp_tool_name: "search_google_scholar"
+      display_name: "Google Scholar Search"
+      description: "Search Google Scholar for security research across conferences (USENIX Security, CCS, S&P, NDSS)"
+      category: "search"
+      source_type: "academic"
+      enabled: true
+
+      response_format:
+        type: "json"
+        results_path: "results"
+        is_dict: false
+        field_mapping:
+          title: "title"
+          url: "url"
+          authors: "authors"
+          year: "year"
+          abstract: "abstract"
+          source_id: "source_id"
+          source: "'google_scholar'"
+          venue: "venue"
+          citations: "citations"
+
+      parameter_mapping:
+        query: "query"
+        max_papers: "max_results"
+        recency_years: "starting_year"
+        slug: null
+        run_id: null
+
+      prompt_snippet: |
+        Use `search_google_scholar` to search for security research articles.
+        - Covers top security venues: USENIX Security, ACM CCS, IEEE S&P, NDSS
+        - Also finds industry reports, blog posts, and grey literature
+        - Example: search_google_scholar(query="kernel exploit mitigation bypass", max_results=10)
+
+      parameters:
+        query:
+          type: "string"
+          required: true
+          description: "Search query"
+        max_results:
+          type: "integer"
+          default: 10
+          description: "Maximum number of results to return"
+        starting_year:
+          type: "integer"
+          required: false
+          description: "Only include papers published on or after this year"
+
+  read_tools:
+    read_url:
+      server: "external_server"
+      mcp_tool_name: "read_url"
+      display_name: "Read URL"
+      description: "Fetch a URL and return contents in Markdown format."
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `read_url` to fetch and read any URL content (HTML pages, PDFs).
+        - Converts web pages and PDFs to clean markdown
+        - Works with academic publisher sites, arXiv, etc.
+        - Example: read_url(url="https://arxiv.org/abs/2301.00001")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL to fetch and read"
+
+    read_pdf:
+      server: "external_server"
+      mcp_tool_name: "read_pdf"
+      display_name: "Read PDF"
+      description: "Fetch a PDF from a URL and return its text content."
+      category: "read"
+      enabled: true
+
+      prompt_snippet: |
+        Use `read_pdf` to download and extract text from a PDF URL.
+        - Use when you have a direct PDF link
+        - Returns full text content of the PDF
+        - Example: read_pdf(url="https://arxiv.org/pdf/2301.00001.pdf")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "Direct URL to the PDF file"
+
+  utility_tools:
+    find_pdf_links:
+      server: "external_server"
+      mcp_tool_name: "find_pdf_links"
+      display_name: "Find PDF Links"
+      description: "Find PDF download links on an HTML page."
+      category: "utility"
+      enabled: true
+
+      prompt_snippet: |
+        Use `find_pdf_links` to find PDF download URLs from an abstract/landing page.
+        - Works with academic publishers (arXiv, bioRxiv, USENIX, ACM, IEEE, etc.)
+        - Example: find_pdf_links(url="https://arxiv.org/abs/2301.00001")
+
+      parameters:
+        url:
+          type: "string"
+          required: true
+          description: "URL of the page to search for PDF links"
+
+    generate_queries:
+      server: "external_server"
+      mcp_tool_name: "generate_queries_hypotheses"
+      display_name: "Generate Search Queries"
+      description: "Generate literature search queries optimized for hypothesis generation."
+      category: "query_generation"
+      enabled: true
+
+      prompt_snippet: |
+        Use `generate_queries_hypotheses` to create optimized search queries.
+        - Supports "natural_language" format (for arXiv, Google Scholar)
+        - Example: generate_queries_hypotheses(research_goal="...", query_format="natural_language")
+
+      parameters:
+        research_goal:
+          type: "string"
+          required: true
+          description: "The research goal or question to generate queries for"
+        query_format:
+          type: "string"
+          default: "natural_language"
+          description: "Format: 'natural_language' (arXiv/Scholar) or 'boolean' (PubMed)"
+        seed:
+          type: "integer"
+          default: 0
+          description: "Random seed for reproducibility"
+
+# Workflow Configurations
+workflows:
+  literature_review:
+    search_sources:
+      - tool: "arxiv_search"
+        papers_per_query: 3
+        enabled: true
+        content_tool: "read_pdf"
+        content_url_field: "pdf_url"
+
+      - tool: "google_scholar_search"
+        papers_per_query: 3
+        enabled: true
+        pdf_discovery_tool: "find_pdf_links"
+        pdf_discovery_url_field: "url"
+        content_tool: "read_pdf"
+        content_url_field: "pdf_url"
+
+    multi_source_strategy: "parallel"
+    deduplicate_across_sources: true
+    availability_check: null
+
+    query_generation_tool: "generate_queries"
+    query_format: "natural_language"
+
+    content_tool: "read_pdf"
+    content_url_field: "pdf_url"
+
+    read_tools:
+      - "read_url"
+      - "read_pdf"
+    utility_tools:
+      - "find_pdf_links"
+
+  draft_generation:
+    search_tools:
+      - "arxiv_search"
+      - "google_scholar_search"
+    read_tools:
+      - "read_pdf"
+
+  validation:
+    search_tools:
+      - "arxiv_search"
+      - "google_scholar_search"
+    read_tools:
+      - "read_pdf"
+
+# Global Settings
+settings:
+  auto_discover: true
+  merge_strategy: "replace"  # Replace default PubMed config entirely
+  allow_disable_builtins: true

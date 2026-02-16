@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from .schema import ServerConfig, ToolConfig, ToolsConfig, WorkflowConfig
+from .schema import PromptsConfig, ServerConfig, ToolConfig, ToolsConfig, WorkflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -333,6 +333,10 @@ class ToolRegistry:
             if tool.mcp_tool_name == mcp_tool_name:
                 return tool
         return None
+
+    def get_prompts_config(self) -> PromptsConfig:
+        """Get the domain-specific prompts configuration."""
+        return self.config.prompts
 
     def get_server_configs_for_langchain(self) -> Dict[str, Dict[str, str]]:
         """

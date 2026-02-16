@@ -33,6 +33,7 @@ async def review_single_hypothesis(
     meta_review: Dict[str, Any] | None = None,
     run_id: str | None = None,
     hypothesis_index: int | None = None,
+    tool_registry: Any | None = None,
 ) -> HypothesisReview:
     """
     Review a single hypothesis.
@@ -54,6 +55,7 @@ async def review_single_hypothesis(
         hypothesis_text=hypothesis_text,
         supervisor_guidance=supervisor_guidance,
         meta_review=meta_review,
+        tool_registry=tool_registry,
     )
 
     # save prompt to disk for debugging
@@ -107,6 +109,7 @@ async def review_parallel_individual(
     supervisor_guidance: Dict[str, Any] | None = None,
     meta_review: Dict[str, Any] | None = None,
     run_id: str | None = None,
+    tool_registry: Any | None = None,
 ) -> List[HypothesisReview]:
     """
     Review hypotheses in parallel (original approach).
@@ -132,6 +135,7 @@ async def review_parallel_individual(
             meta_review=meta_review,
             run_id=run_id,
             hypothesis_index=i,
+            tool_registry=tool_registry,
         )
         for i, hyp in enumerate(hypotheses)
     ]
@@ -146,6 +150,7 @@ async def review_comparative_batch(
     supervisor_guidance: Dict[str, Any] | None = None,
     meta_review: Dict[str, Any] | None = None,
     run_id: str | None = None,
+    tool_registry: Any | None = None,
 ) -> List[HypothesisReview]:
     """
     Review hypotheses in a single comparative batch.
@@ -173,6 +178,7 @@ async def review_comparative_batch(
         hypotheses_list=hypotheses_list,
         supervisor_guidance=supervisor_guidance,
         meta_review=meta_review,
+        tool_registry=tool_registry,
     )
 
     # save prompt to disk for debugging
@@ -317,6 +323,8 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
     meta_review = state.get("meta_review")
 
     # Execute chosen strategy
+    tool_registry = state.get("tool_registry")
+
     if use_comparative:
         reviews = await review_comparative_batch(
             hypotheses=hypotheses,
@@ -325,6 +333,7 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
             supervisor_guidance=supervisor_guidance,
             meta_review=meta_review,
             run_id=state.get("run_id"),
+            tool_registry=tool_registry,
         )
         llm_calls = 1  # Single batch call
     else:
@@ -335,6 +344,7 @@ async def review_node(state: WorkflowState) -> Dict[str, Any]:
             supervisor_guidance=supervisor_guidance,
             meta_review=meta_review,
             run_id=state.get("run_id"),
+            tool_registry=tool_registry,
         )
         llm_calls = num_hypotheses  # One call per hypothesis
 

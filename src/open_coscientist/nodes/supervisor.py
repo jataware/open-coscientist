@@ -73,6 +73,7 @@ async def supervisor_node(state: WorkflowState) -> Dict[str, Any]:
         evolution_max_count=evolution_max_count,
         mcp_available=mcp_available,
         pubmed_available=pubmed_available,
+        tool_registry=state.get("tool_registry"),
     )
 
     # save prompt to disk for debugging

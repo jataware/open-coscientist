@@ -1,3 +1,5 @@
+{{domain_context}}
+
 You are an expert in scientific hypothesis evaluation. Your task is to analyze the relationship between a provided hypothesis and observations from scientific articles.
 
 Specifically, determine if the hypothesis provides a novel causal explanation for the/any observations, or if they contradict it.
