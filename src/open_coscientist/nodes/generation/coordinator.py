@@ -6,6 +6,7 @@ When no literature is available, literature_grounding contains an explicit warni
 """
 
 import asyncio
+import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
@@ -15,6 +16,7 @@ from ...constants import (
     PROGRESS_GENERATE_COMPLETE,
     LITERATURE_REVIEW_FAILED,
 )
+from ...mcp_client import get_mcp_client
 from ...models import Hypothesis
 from ...state import WorkflowState
 from .debate import generate_with_debate
@@ -320,6 +322,59 @@ async def _emit_complete_progress(
     )
 
 
+# enrichment
+
+
+async def _enrich_hypotheses(
+    hypotheses: List[Hypothesis],
+    state: WorkflowState,
+) -> None:
+    """Run post-generation enrichment tools and attach results to hypotheses.
+
+    Reads enrichment configs from the tool registry. For each config, calls
+    the specified tool with each hypothesis's input_field value and stores
+    the result in hypothesis.enrichments[output_key].
+    """
+    tool_registry = state.get("tool_registry")
+    if not tool_registry:
+        return
+
+    enrichment_configs = tool_registry.get_enrichment_configs()
+    if not enrichment_configs:
+        return
+
+    mcp_client = await get_mcp_client(tool_registry=tool_registry)
+
+    for enrichment in enrichment_configs:
+        tool_config = tool_registry.get_tool(enrichment.tool)
+        if not tool_config:
+            logger.warning(f"enrichment tool '{enrichment.tool}' not found in registry")
+            continue
+
+        output_key = enrichment.output_key or enrichment.tool
+        logger.info(
+            f"running enrichment '{output_key}' via {tool_config.mcp_tool_name} "
+            f"for {len(hypotheses)} hypotheses"
+        )
+
+        for hyp in hypotheses:
+            input_value = getattr(hyp, enrichment.input_field, hyp.text)
+            try:
+                result = await mcp_client.call_tool(
+                    tool_config.mcp_tool_name,
+                    topic=input_value,
+                    max_results=enrichment.max_results,
+                )
+                parsed = json.loads(result) if isinstance(result, str) else result
+                # extract nested array via results_path (e.g., "results" for NvdSearchResponse)
+                if enrichment.results_path and isinstance(parsed, dict):
+                    parsed = parsed.get(enrichment.results_path, parsed)
+                hyp.enrichments[output_key] = parsed
+            except Exception as e:
+                logger.warning(f"enrichment '{output_key}' failed for hypothesis: {e}")
+                hyp.enrichments[output_key] = {"error": str(e)}
+
+
 # main coordinator function
 
 
@@ -369,6 +424,9 @@ async def generate_hypotheses(state: WorkflowState) -> Dict[str, Any]:
             + results.debate_with_lit_hypotheses
             + results.debate_only_hypotheses
         )
+
+        # run post-generation enrichments (e.g., NVD CVE lookup)
+        await _enrich_hypotheses(all_hypotheses, state)
 
         parts = _build_summary_message_parts(results, counts)
         message_content = f"Generated {len(all_hypotheses)} hypotheses ({', '.join(parts)})"

@@ -390,6 +390,45 @@ class WorkflowConfig:
 
 
 @dataclass
+class EnrichmentConfig:
+    """
+    Configuration for a post-generation enrichment step.
+
+    Each enrichment maps a tool to a hypothesis field, running the tool
+    with the hypothesis field value as input and storing results in
+    hypothesis.enrichments[output_key].
+
+    Attributes:
+        tool: Tool ID from tools section (e.g., "nvd_cve_search")
+        input_field: Hypothesis field to use as input (text, explanation, etc.)
+        output_key: Key in hypothesis.enrichments dict (e.g., "related_cves")
+        enabled: Whether this enrichment is enabled
+        max_results: Max results to request from the tool
+        results_path: Dot-path to extract from response (e.g., "results" to unwrap a
+            response wrapper). Empty string means use the full response as-is.
+    """
+
+    tool: str
+    input_field: str = "text"
+    output_key: str = ""
+    enabled: bool = True
+    max_results: int = 10
+    results_path: str = ""
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "EnrichmentConfig":
+        """Create EnrichmentConfig from dictionary."""
+        return cls(
+            tool=data.get("tool", ""),
+            input_field=data.get("input_field", "text"),
+            output_key=data.get("output_key", ""),
+            enabled=data.get("enabled", True),
+            max_results=data.get("max_results", 10),
+            results_path=data.get("results_path", ""),
+        )
+
+
+@dataclass
 class Settings:
     """Global settings for tool configuration."""
 
@@ -460,6 +499,7 @@ class ToolsConfig:
     workflows: Dict[str, WorkflowConfig] = field(default_factory=dict)
     settings: Settings = field(default_factory=Settings)
     prompts: PromptsConfig = field(default_factory=PromptsConfig)
+    enrichments: List[EnrichmentConfig] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ToolsConfig":
@@ -488,6 +528,12 @@ class ToolsConfig:
         # parse prompts
         prompts = PromptsConfig.from_dict(data.get("prompts", {}))
 
+        # parse enrichments
+        enrichments = [
+            EnrichmentConfig.from_dict(e)
+            for e in data.get("enrichments", [])
+        ]
+
         return cls(
             version=data.get("version", "1.0"),
             servers=servers,
@@ -495,6 +541,7 @@ class ToolsConfig:
             workflows=workflows,
             settings=settings,
             prompts=prompts,
+            enrichments=enrichments,
         )
 
     def get_tool(self, tool_id: str) -> Optional[ToolConfig]:

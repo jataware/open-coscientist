@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from .schema import PromptsConfig, ServerConfig, ToolConfig, ToolsConfig, WorkflowConfig
+from .schema import EnrichmentConfig, PromptsConfig, ServerConfig, ToolConfig, ToolsConfig, WorkflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -337,6 +337,10 @@ class ToolRegistry:
     def get_prompts_config(self) -> PromptsConfig:
         """Get the domain-specific prompts configuration."""
         return self.config.prompts
+
+    def get_enrichment_configs(self) -> List[EnrichmentConfig]:
+        """Get enabled enrichment configurations."""
+        return [e for e in self.config.enrichments if e.enabled]
 
     def get_server_configs_for_langchain(self) -> Dict[str, Dict[str, str]]:
         """

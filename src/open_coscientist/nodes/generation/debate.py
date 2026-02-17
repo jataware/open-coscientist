@@ -30,10 +30,9 @@ def _match_papers_to_grounding(articles, literature_grounding):
     literature_grounding string, so each hypothesis gets only the papers
     it actually cited — not all articles from the literature review.
 
-    Falls back to all used_in_analysis articles if literature_grounding
-    is empty or no titles match.
+    Returns empty list if literature_grounding is empty or no titles match.
     """
-    if not articles:
+    if not articles or not literature_grounding:
         return []
 
     analyzed = [
@@ -41,39 +40,31 @@ def _match_papers_to_grounding(articles, literature_grounding):
         if getattr(art, "used_in_analysis", False)
     ]
 
-    # if we have grounding text, filter to only cited papers
-    if literature_grounding:
-        grounding_lower = literature_grounding.lower()
-        matched = []
-        seen = set()
-        for art in analyzed:
-            title = getattr(art, "title", "")
-            if not title:
-                continue
-            # match on substantial title fragments (first 40+ chars)
-            # to avoid false positives on short common words
-            title_key = title.lower().strip()
-            match_fragment = title_key[:60] if len(title_key) > 60 else title_key
-            if match_fragment in grounding_lower and title not in seen:
-                seen.add(title)
-                matched.append({
-                    "title": title,
-                    "url": getattr(art, "url", "") or "",
-                })
-
-        if matched:
-            return matched
-
-    # fallback: return all analyzed articles (better than empty)
+    grounding_lower = literature_grounding.lower()
+    matched = []
     seen = set()
-    papers = []
     for art in analyzed:
         title = getattr(art, "title", "")
-        url = getattr(art, "url", "") or ""
-        if (title, url) not in seen:
-            seen.add((title, url))
-            papers.append({"title": title, "url": url})
-    return papers
+        if not title:
+            continue
+        # match on substantial title fragments (first 40+ chars)
+        # to avoid false positives on short common words
+        title_key = title.lower().strip()
+        match_fragment = title_key[:60] if len(title_key) > 60 else title_key
+        if match_fragment in grounding_lower and title not in seen:
+            seen.add(title)
+            matched.append({
+                "title": title,
+                "url": getattr(art, "url", "") or "",
+            })
+
+    if not matched:
+        logger.debug(
+            f"no title matches found in literature_grounding "
+            f"({len(analyzed)} analyzed articles, grounding length={len(literature_grounding)})"
+        )
+
+    return matched
 
 
 async def _run_single_debate(

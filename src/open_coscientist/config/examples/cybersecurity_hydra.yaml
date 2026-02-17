@@ -213,6 +213,31 @@ tools:
           required: false
           description: "Only include papers published on or after this year"
 
+    nvd_cve_search:
+      server: "external_server"
+      mcp_tool_name: "search_nvd_cves"
+      display_name: "NVD CVE Search"
+      description: "Search NIST NVD for CVEs related to a topic. Returns CVEs ranked by CVSS score."
+      category: "search"
+      source_type: "vulnerability_database"
+      enabled: true
+
+      prompt_snippet: |
+        Use `search_nvd_cves` to find known vulnerabilities related to a topic.
+        - Distills your query into NVD keyword search terms automatically
+        - Returns CVEs with CVSS scores, severity, CWE IDs, and references
+        - Example: search_nvd_cves(topic="buffer overflow in OpenSSL", max_results=5)
+
+      parameters:
+        topic:
+          type: "string"
+          required: true
+          description: "Research topic or text snippet to search NVD for"
+        max_results:
+          type: "integer"
+          default: 10
+          description: "Maximum CVEs to return (ranked by CVSS score)"
+
   read_tools:
     read_url:
       server: "external_server"
@@ -339,6 +364,7 @@ workflows:
     search_tools:
       - "arxiv_search"
       - "google_scholar_search"
+      - "nvd_cve_search"
     read_tools:
       - "read_pdf"
 
@@ -346,6 +372,7 @@ workflows:
     search_tools:
       - "arxiv_search"
       - "google_scholar_search"
+      - "nvd_cve_search"
     read_tools:
       - "read_pdf"
 
@@ -354,3 +381,13 @@ settings:
   auto_discover: true
   merge_strategy: "replace"  # Replace default PubMed config entirely
   allow_disable_builtins: true
+
+# Post-Generation Enrichments
+# Each enrichment calls a tool per hypothesis and attaches results to hypothesis.enrichments
+enrichments:
+  - tool: "nvd_cve_search"
+    input_field: "text"
+    output_key: "related_cves"
+    results_path: "results"  # extract CveResult array from NvdSearchResponse wrapper
+    enabled: true
+    max_results: 5

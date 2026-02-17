@@ -32,6 +32,7 @@ from ....schemas import (
 from ....state import WorkflowState
 from ....tools.literature import literature_tools
 from ....tools.provider import HybridToolProvider
+from ....tools.response_parser import ResponseParser
 
 if TYPE_CHECKING:
     from ....config import ToolRegistry
@@ -95,6 +96,83 @@ def _extract_papers_for_hypothesis(hypothesis_with_analyses):
     return papers
 
 
+def _find_search_tool(tool_registry: Optional["ToolRegistry"]):
+    """Find the first search-category tool from the validation workflow.
+
+    Returns (tool_id, tool_config) or (None, None) if no search tool is configured.
+    """
+    if not tool_registry:
+        return None, None
+
+    tool_ids = tool_registry.get_tools_for_workflow("validation")
+    for tool_id in tool_ids:
+        tool_config = tool_registry.get_tool(tool_id)
+        if tool_config and tool_config.category in ("search", "search_with_content"):
+            return tool_id, tool_config
+    return None, None
+
+
+async def _search_papers_for_hypothesis(
+    hypothesis_text: str,
+    mcp_client: Any,
+    tool_registry: Optional["ToolRegistry"],
+    max_papers: int,
+    shared_slug: str,
+    run_id: Optional[str],
+) -> Dict[str, Dict[str, Any]]:
+    """Search for papers related to a hypothesis using config-driven tool selection.
+
+    Returns papers in the dict format expected by analyze_paper_novelty:
+    {paper_id: {"title": ..., "authors": [...], "year": ..., "fulltext": ...}}
+
+    Falls back to pubmed_search_with_fulltext when no tool_registry is provided
+    (backwards compatibility).
+    """
+    tool_id, tool_config = _find_search_tool(tool_registry)
+
+    if tool_config:
+        # config-driven search
+        canonical_params = {"query": hypothesis_text[:200], "max_papers": max_papers}
+        mapped_params = tool_config.map_parameters(canonical_params)
+
+        result = await mcp_client.call_tool(tool_config.mcp_tool_name, **mapped_params)
+
+        # parse response through ResponseParser -> List[Article]
+        parser = ResponseParser(tool_config)
+        articles = parser.parse_to_articles(result)
+
+        # convert List[Article] to the {paper_id: {...}} dict format
+        papers = {}
+        for article in articles:
+            paper_id = article.source_id or article.url or article.title
+            papers[paper_id] = {
+                "title": article.title,
+                "authors": article.authors,
+                "year": article.year,
+                "fulltext": article.content or article.abstract or "",
+            }
+        return papers
+
+    if tool_registry:
+        # registry exists but has no search tools for validation — skip novelty search
+        logger.warning(
+            "no search tools configured for validation workflow, skipping novelty search"
+        )
+        return {}
+
+    # legacy fallback: no registry at all, try pubmed directly
+    result = await mcp_client.call_tool(
+        "pubmed_search_with_fulltext",
+        query=hypothesis_text[:200],
+        max_papers=max_papers,
+        slug=shared_slug,
+        run_id=run_id,
+    )
+    if isinstance(result, str):
+        return json.loads(result)
+    return result
+
+
 async def validate_hypotheses(
     state: WorkflowState,
     draft_hypotheses: List[Dict[str, str]],
@@ -143,22 +221,16 @@ async def validate_hypotheses(
             f"Analyzing hypothesis {idx}/{len(draft_hypotheses)}: {hypothesis_text[:80]}..."
         )
 
-        # search for papers related to this hypothesis
+        # search for papers related to this hypothesis (config-driven)
         try:
-            search_result = await mcp_client.call_tool(
-                "pubmed_search_with_fulltext",
-                query=hypothesis_text[:200],  # use hypothesis text as query
+            papers = await _search_papers_for_hypothesis(
+                hypothesis_text=hypothesis_text,
+                mcp_client=mcp_client,
+                tool_registry=tool_registry,
                 max_papers=GENERATE_LIT_TOOL_MAX_PAPERS,
-                slug=shared_slug,
+                shared_slug=shared_slug,
                 run_id=run_id,
             )
-
-            # parse result (mcp returns JSON string)
-            if isinstance(search_result, str):
-                papers = json.loads(search_result)
-            else:
-                papers = search_result
-
             logger.info(f"Found {len(papers)} papers for hypothesis {idx}")
 
         except Exception as e:

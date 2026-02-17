@@ -5,6 +5,7 @@ Provides YAML-based configuration for bringing your own MCP tools.
 """
 
 from .schema import (
+    EnrichmentConfig,
     ServerConfig,
     ResponseFormat,
     ParameterConfig,
@@ -16,6 +17,7 @@ from .schema import (
 from .registry import ToolRegistry, get_tool_registry
 
 __all__ = [
+    "EnrichmentConfig",
     "ServerConfig",
     "ResponseFormat",
     "ParameterConfig",
