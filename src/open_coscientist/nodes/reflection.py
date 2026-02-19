@@ -44,11 +44,17 @@ async def analyze_single_hypothesis(
     """
     logger.debug(f"\n→ analyzing hypothesis {hypothesis_index}/{total_count}")
 
-    # get reflection prompt
+    # pre-fetch INDRA evidence for this hypothesis (non-critical, skip on failure)
+    indra_data = await _fetch_indra_for_hypothesis(
+        hypothesis.text, tool_registry, hypothesis_index,
+    )
+
+    # get reflection prompt (uses formatted text for LLM context)
     prompt, schema = get_reflection_prompt(
         articles_with_reasoning=articles_with_reasoning,
         hypothesis_text=hypothesis.text,
         tool_registry=tool_registry,
+        indra_evidence=indra_data.get("prompt_text", ""),
     )
 
     # save prompt to disk for debugging
@@ -80,7 +86,11 @@ async def analyze_single_hypothesis(
 
         logger.debug(f"hypothesis {hypothesis_index} classification: {classification}")
 
-        return {"classification": classification, "reasoning": reasoning}
+        return {
+            "classification": classification,
+            "reasoning": reasoning,
+            "indra_enrichment_items": indra_data.get("enrichment_items", []),
+        }
 
     except Exception as e:
         logger.error(f"Reflection failed for hypothesis {hypothesis_index}: {e}")
@@ -157,10 +167,12 @@ async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
         if result:
             classification = result.get("classification", "neutral")
             reasoning = result.get("reasoning", "")
-            # concatenate reasoning and classification into reflection_notes
             hypothesis.reflection_notes = f"{reasoning}\n\nClassification: {classification}"
+            # store knowledge graph evidence in enrichments (yaml-driven, only present for biomedical configs)
+            enrichment_items = result.get("indra_enrichment_items", [])
+            if enrichment_items:
+                hypothesis.enrichments["indra_evidence"] = enrichment_items
         else:
-            # analysis failed, set neutral classification
             hypothesis.reflection_notes = "Analysis failed\n\nClassification: neutral"
 
     # emit progress
@@ -186,3 +198,36 @@ async def reflection_node(state: WorkflowState) -> Dict[str, Any]:
             }
         ],
     }
+
+
+async def _fetch_indra_for_hypothesis(
+    hypothesis_text: str,
+    tool_registry: Any | None,
+    hypothesis_index: int,
+) -> Dict[str, Any]:
+    """Pre-fetch INDRA knowledge graph evidence for a hypothesis.
+
+    Non-critical: returns empty dict on any failure so reflection
+    proceeds without INDRA data if the MCP server or tools are unavailable.
+
+    Returns dict with "prompt_text" (str) and "enrichment_items" (list).
+    """
+    empty: Dict[str, Any] = {"prompt_text": "", "enrichment_items": []}
+    try:
+        from .reflection_helpers import fetch_indra_evidence
+
+        result = await fetch_indra_evidence(
+            hypothesis_text=hypothesis_text,
+            tool_registry=tool_registry,
+            max_statements=5,
+        )
+        prompt_text = result.get("prompt_text", "")
+        if prompt_text:
+            logger.debug(
+                f"hypothesis {hypothesis_index}: fetched INDRA evidence "
+                f"({len(prompt_text)} chars, {len(result.get('enrichment_items', []))} items)"
+            )
+        return result
+    except Exception as e:
+        logger.debug(f"hypothesis {hypothesis_index}: INDRA fetch skipped: {e}")
+        return empty

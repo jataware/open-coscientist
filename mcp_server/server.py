@@ -32,6 +32,16 @@ logging.getLogger('mcp_server').setLevel(log_level)
 
 from mcp_server.tools.lit_review.search_pubmed import check_pubmed_available, search_pubmed
 from mcp_server.tools.lit_review.pubmed_search_with_fulltext import pubmed_search_with_fulltext
+from mcp_server.tools.indra_cogex import (
+    query_gene_disease_network,
+    query_gene_codependents,
+    query_drug_info,
+    query_clinical_trials,
+    query_pathways,
+    query_causal_subnetwork,
+    query_mechanistic_statements,
+    run_enrichment_analysis,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +57,16 @@ mcp = FastMCP("open-coscientist-lit-review")
 mcp.tool(check_pubmed_available,       name="check_pubmed_available")
 mcp.tool(search_pubmed,                name="search_pubmed")
 mcp.tool(pubmed_search_with_fulltext,  name="pubmed_search_with_fulltext")
+
+# register INDRA CoGex knowledge graph tools
+mcp.tool(query_gene_disease_network,    name="query_gene_disease_network")
+mcp.tool(query_gene_codependents,       name="query_gene_codependents")
+mcp.tool(query_drug_info,               name="query_drug_info")
+mcp.tool(query_clinical_trials,         name="query_clinical_trials")
+mcp.tool(query_pathways,                name="query_pathways")
+mcp.tool(query_causal_subnetwork,       name="query_causal_subnetwork")
+mcp.tool(query_mechanistic_statements,  name="query_mechanistic_statements")
+mcp.tool(run_enrichment_analysis,       name="run_enrichment_analysis")
 
 mcp_http_app = mcp.http_app()
 app = FastAPI(lifespan=mcp_http_app.lifespan)
@@ -70,10 +90,21 @@ async def root():
         "mcp_tools": [
             "check_pubmed_available",
             "search_pubmed",
-            "pubmed_search_with_fulltext"
+            "pubmed_search_with_fulltext",
+            "query_gene_disease_network",
+            "query_gene_codependents",
+            "query_drug_info",
+            "query_clinical_trials",
+            "query_pathways",
+            "query_causal_subnetwork",
+            "query_mechanistic_statements",
+            "run_enrichment_analysis",
         ],
         "api_keys_configured": {
-            "ENTREZ_EMAIL": entrez_email_present
+            "ENTREZ_EMAIL": entrez_email_present,
+        },
+        "integrations": {
+            "indra_cogex": os.getenv("INDRA_COGEX_URL", "https://discovery.indra.bio"),
         }
     })
 

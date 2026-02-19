@@ -22,7 +22,6 @@ from ....llm import call_llm_json, call_llm_with_tools, attempt_json_repair
 from ....models import Hypothesis
 from ....prompts import (
     get_hypothesis_novelty_analysis_prompt,
-    get_hypothesis_validation_synthesis_prompt,
     get_validation_synthesis_prompt_with_tools,
 )
 from ....schemas import (
@@ -40,60 +39,26 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-# tool names that indicate paper reading (used to extract papers_used)
-_READ_TOOL_NAMES = {"read_url", "read_pdf", "fetch_url", "get_pdf"}
 
+def _extract_papers_for_hypothesis(hypothesis_with_analyses, literature_grounding=None):
+    """Extract papers cited by this hypothesis from its novelty analysis metadata.
 
-def _extract_papers_from_messages(messages):
-    """Extract papers read from tool call message history.
-
-    Scans messages for read-type tool calls (read_url, read_pdf, etc.)
-    and extracts URLs from their arguments. Deduplicates by URL.
+    When literature_grounding is available, filters to only papers whose
+    author+year appear in the grounding text. Falls back to all analyzed
+    papers for this hypothesis when grounding is empty or has no matches.
     """
-    papers = []
-    seen_urls = set()
+    from ..papers import analyses_to_candidates, filter_papers_by_grounding
 
-    for msg in messages:
-        tool_calls = msg.get("tool_calls", [])
-        for tc in tool_calls:
-            fn = tc.get("function", {})
-            name = fn.get("name", "")
-            if name not in _READ_TOOL_NAMES:
-                continue
+    analyses = hypothesis_with_analyses.get("novelty_analyses", [])
+    candidates = analyses_to_candidates(analyses)
 
-            # parse arguments to extract URL
-            args_str = fn.get("arguments", "{}")
-            try:
-                args = json.loads(args_str) if isinstance(args_str, str) else args_str
-            except (json.JSONDecodeError, TypeError):
-                continue
+    if literature_grounding:
+        matched = filter_papers_by_grounding(candidates, literature_grounding)
+        if matched:
+            return matched
 
-            url = args.get("url", "") or args.get("pdf_url", "")
-            if url and url not in seen_urls:
-                seen_urls.add(url)
-                papers.append({"title": "", "url": url})
-
-    return papers
-
-
-def _extract_papers_for_hypothesis(hypothesis_with_analyses):
-    """Extract papers from a single hypothesis's novelty analysis metadata.
-
-    Returns only the papers that were analyzed for this specific hypothesis,
-    not all papers across all hypotheses.
-    """
-    papers = []
-    seen = set()
-
-    for analysis in hypothesis_with_analyses.get("novelty_analyses", []):
-        meta = analysis.get("paper_metadata", {})
-        paper_id = meta.get("paper_id", "")
-        title = meta.get("title", "")
-        if paper_id and paper_id not in seen:
-            seen.add(paper_id)
-            papers.append({"title": title, "url": paper_id})
-
-    return papers
+    # fallback: return all papers analyzed for this hypothesis
+    return [{"title": c["title"], "url": c["url"]} for c in candidates]
 
 
 def _find_search_tool(tool_registry: Optional["ToolRegistry"]):
@@ -132,7 +97,13 @@ async def _search_papers_for_hypothesis(
 
     if tool_config:
         # config-driven search
-        canonical_params = {"query": hypothesis_text[:200], "max_papers": max_papers}
+        canonical_params = {
+            "query": hypothesis_text[:200],
+            "max_papers": max_papers,
+            "slug": shared_slug,
+        }
+        if run_id:
+            canonical_params["run_id"] = run_id
         mapped_params = tool_config.map_parameters(canonical_params)
 
         result = await mcp_client.call_tool(tool_config.mcp_tool_name, **mapped_params)
@@ -216,7 +187,7 @@ async def validate_hypotheses(
     hypotheses_with_analyses = []
 
     for idx, draft in enumerate(draft_hypotheses, 1):
-        hypothesis_text = draft.get("text", "")
+        hypothesis_text = draft.get("hypothesis") or draft.get("text", "")
         logger.info(
             f"Analyzing hypothesis {idx}/{len(draft_hypotheses)}: {hypothesis_text[:80]}..."
         )
@@ -274,7 +245,12 @@ async def validate_hypotheses(
                 )
 
                 return {
-                    "paper_metadata": {"paper_id": paper_id, "title": title, "year": year},
+                    "paper_metadata": {
+                        "paper_id": paper_id,
+                        "title": title,
+                        "year": year,
+                        "authors": authors,
+                    },
                     "analysis": analysis,
                 }
             except Exception as e:
@@ -487,10 +463,12 @@ async def validate_hypotheses(
         literature_grounding = hyp_data.get("literature_grounding")
         experiment = hyp_data.get("experiment")
 
-        # extract only the papers analyzed for THIS specific hypothesis
+        # extract only the papers actually cited by THIS hypothesis
         papers_used = []
         if i < len(hypotheses_with_analyses):
-            papers_used = _extract_papers_for_hypothesis(hypotheses_with_analyses[i])
+            papers_used = _extract_papers_for_hypothesis(
+                hypotheses_with_analyses[i], literature_grounding
+            )
 
         hypothesis = Hypothesis(
             text=hypothesis_text,

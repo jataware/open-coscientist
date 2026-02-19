@@ -194,6 +194,7 @@ def _get_domain_variables(tool_registry: Optional[Any] = None) -> Dict[str, str]
         "domain_generation_guidance": prompts_config.generation_guidance,
         "domain_review_guidance": prompts_config.review_guidance,
         "domain_evolution_guidance": prompts_config.evolution_guidance,
+        "domain_reflection_guidance": prompts_config.reflection_guidance,
     }
 
 
@@ -674,11 +675,13 @@ def get_reflection_prompt(
     articles_with_reasoning: str,
     hypothesis_text: str,
     tool_registry: Optional[Any] = None,
+    indra_evidence: str = "",
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """Get the reflection observations prompt and schema."""
     variables = {
         "articles_with_reasoning": articles_with_reasoning,
         "hypothesis": hypothesis_text,
+        "indra_evidence": indra_evidence,
     }
 
     # inject domain-specific prompt customizations

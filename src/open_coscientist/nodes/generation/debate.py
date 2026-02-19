@@ -26,45 +26,15 @@ logger = logging.getLogger(__name__)
 def _match_papers_to_grounding(articles, literature_grounding):
     """Match lit review articles against a hypothesis's literature_grounding text.
 
-    Only returns articles whose title appears (case-insensitive) in the
-    literature_grounding string, so each hypothesis gets only the papers
-    it actually cited — not all articles from the literature review.
+    Uses author last name + year matching against citation patterns like
+    "(Roepert et al., 2020; Erba et al., 2021)" in the grounding text.
 
-    Returns empty list if literature_grounding is empty or no titles match.
+    Returns empty list if no grounding text or no matches.
     """
-    if not articles or not literature_grounding:
-        return []
+    from .papers import articles_to_candidates, filter_papers_by_grounding
 
-    analyzed = [
-        art for art in articles
-        if getattr(art, "used_in_analysis", False)
-    ]
-
-    grounding_lower = literature_grounding.lower()
-    matched = []
-    seen = set()
-    for art in analyzed:
-        title = getattr(art, "title", "")
-        if not title:
-            continue
-        # match on substantial title fragments (first 40+ chars)
-        # to avoid false positives on short common words
-        title_key = title.lower().strip()
-        match_fragment = title_key[:60] if len(title_key) > 60 else title_key
-        if match_fragment in grounding_lower and title not in seen:
-            seen.add(title)
-            matched.append({
-                "title": title,
-                "url": getattr(art, "url", "") or "",
-            })
-
-    if not matched:
-        logger.debug(
-            f"no title matches found in literature_grounding "
-            f"({len(analyzed)} analyzed articles, grounding length={len(literature_grounding)})"
-        )
-
-    return matched
+    candidates = articles_to_candidates(articles)
+    return filter_papers_by_grounding(candidates, literature_grounding)
 
 
 async def _run_single_debate(

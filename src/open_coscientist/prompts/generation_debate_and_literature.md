@@ -101,7 +101,7 @@ Subsequent contributions (continuing the discussion when there's a transcript):
 General guidelines:
 * Exhibit boldness and creativity in your contributions.
 * Maintain a helpful and collaborative approach.
-For turns 2+ ensure you include your thought / debate / criticism context alongside the updated hypotheses/hypothesis. Don't be extremely verbose, get to the point- but do ensure you add reasoning on why the hypothesis needs to be updated. You are participating in collaborative discourse, after all.
+For every turn ensure you include your thought / debate / criticism context alongside the updated hypotheses/hypothesis. Don't be extremely verbose, get to the point- but do ensure you add reasoning on why the hypothesis needs to be updated. You are participating in collaborative discourse, after all.
 * Prioritize the generation of a high-quality {{attributes}} hypothesis.
 
 Termination condition:

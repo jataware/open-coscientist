@@ -471,6 +471,7 @@ class PromptsConfig:
     generation_guidance: str = ""
     review_guidance: str = ""
     evolution_guidance: str = ""
+    reflection_guidance: str = ""
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "PromptsConfig":
@@ -482,6 +483,7 @@ class PromptsConfig:
             generation_guidance=data.get("generation_guidance", ""),
             review_guidance=data.get("review_guidance", ""),
             evolution_guidance=data.get("evolution_guidance", ""),
+            reflection_guidance=data.get("reflection_guidance", ""),
         )
 
 

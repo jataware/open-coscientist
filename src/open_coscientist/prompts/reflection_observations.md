@@ -11,7 +11,7 @@ Instructions:
     a. State if its cause is already established.
     b. Assess if the hypothesis could be a causal factor (hypothesis => observation).
     c. Start with: "would we see this observation if the hypothesis was true:".
-    d. Explain if it’s a novel explanation. If not, or if a better explanation exists, state: "not a missing piece."
+    d. Explain if it's a novel explanation. If not, or if a better explanation exists, state: "not a missing piece."
 3. Causal analysis (summary): determine if the hypothesis offers a novel explanation for a subset of observations. Include reasoning. Start with: "would we see some of the observations if the hypothesis was true:".
 4. Disproof analysis: determine if any observations contradict the hypothesis.
 Start with: "does some observations disprove the hypothesis:".
@@ -25,12 +25,16 @@ Scoring:
 * Neutral: hypothesis neither explains nor is contradicted.
 * Disproved: observations contradict the hypothesis.
 
-Important: if observations are expected regardless of the hypothesis, and don’t disprove it, it’s neutral.
+Important: if observations are expected regardless of the hypothesis, and don't disprove it, it's neutral.
 
-All articles from literaturea review, with reasoning:
+{{domain_reflection_guidance}}
+
+All articles from literature review, with reasoning:
 {{articles_with_reasoning}}
+
+{{indra_evidence}}
 
 Hypothesis:
 {{hypothesis}}
 
-Response: provide reasoning. End with: "hypothesis: <already explained, other explanations more likely, missing piece, neutral, or disproved>".)
+Response: provide reasoning. End with: "hypothesis: <already explained, other explanations more likely, missing piece, neutral, or disproved>".
