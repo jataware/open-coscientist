@@ -1,0 +1,200 @@
+# Alzheimer's Disease Drug Repurposing - INDRA CoGex Configuration
+# Version 1.0
+#
+# Domain-specific configuration for neurodegeneration/Alzheimer's hypothesis
+# generation. Extends default PubMed config with INDRA knowledge graph tools
+# and AD-focused prompt guidance.
+#
+# Example research goal:
+#   "What existing approved drugs targeting neuroinflammatory pathways could
+#    slow Alzheimer's disease progression by modulating microglial activation,
+#    and what molecular signatures distinguish potential responders?"
+#
+# Requirements:
+# - MCP server with INDRA CoGex tools on default port (8888)
+# - PubMed still used for literature review (from default config)
+
+version: "1.0"
+
+# Domain-Specific Prompt Customizations
+prompts:
+  domain_context: |
+    ## Domain: Neurodegeneration - Alzheimer's Disease Drug Repurposing
+
+    You are a neuroscience researcher specializing in Alzheimer's disease (AD),
+    neuroinflammation, and drug repurposing. Your audience includes
+    neurologists, pharmaceutical researchers, and translational neuroscientists.
+
+    Key terminology:
+    - "Hypothesis" means a novel therapeutic mechanism, drug repurposing
+      candidate, or biomarker insight for slowing AD progression.
+    - "Experiment" means preclinical validation (microglial assays, tau/amyloid
+      models, transcriptomic analysis) or clinical trial design.
+    - Literature sources include PubMed biomedical research and the INDRA
+      mechanistic knowledge graph (curated causal assertions from literature).
+
+    Focus areas: neuroinflammation, microglial activation, tau pathology,
+    amyloid processing, synaptic dysfunction, drug repurposing from approved
+    compounds, TREM2/APOE biology, blood-brain barrier considerations.
+
+  generation_guidance: |
+    ## Alzheimer's Hypothesis Generation Guidance
+
+    ### Hypothesis Categories
+    Generate hypotheses spanning diverse therapeutic approaches:
+    1. **Drug repurposing** - existing approved drugs with AD-relevant mechanisms
+    2. **Neuroinflammation targets** - microglial modulation, complement system
+    3. **Pathway convergence** - shared mechanisms across AD risk genes
+    4. **Biomarker-guided therapy** - molecular signatures for patient selection
+    5. **Combination strategies** - targeting multiple AD pathological processes
+
+    ### Hypothesis Format
+    Each hypothesis should follow:
+    "We hypothesize that [drug/mechanism] can [therapeutic outcome] in AD,
+    by [molecular mechanism] acting on [specific pathway/cell type]."
+
+    ### Key AD Risk Genes to Consider
+    TREM2, APOE, BIN1, CLU, PICALM, CD33, MS4A6A, ABCA7, CR1, SPI1
+
+  review_guidance: |
+    ## Alzheimer's Review Criteria
+
+    Prioritize:
+    1. **Mechanistic plausibility** - consistent with known AD biology?
+    2. **BBB penetration** - can the drug reach the CNS?
+    3. **Clinical translatability** - feasible for clinical trial design?
+    4. **Safety profile** - acceptable risk for a chronic neurodegenerative disease?
+    5. **Novelty** - goes beyond failed amyloid-only or tau-only approaches?
+
+  reflection_guidance: |
+    ## Knowledge Graph Verification
+
+    When INDRA knowledge graph evidence is provided below, use it to:
+    - Verify whether the proposed drug-target interactions are supported
+      by curated evidence in the knowledge graph
+    - Check if the neuroinflammatory pathway connections claimed in the
+      hypothesis actually exist
+    - Identify if the proposed repurposing mechanism is already well-known
+      (suggesting "already explained") or genuinely novel ("missing piece")
+    - Cross-reference drug indications and side effects with AD pathology
+    Be concise. Do not repeat the INDRA evidence verbatim.
+
+  evolution_guidance: |
+    ## Alzheimer's Evolution Priorities
+
+    When refining AD hypotheses:
+    1. **Specify the AD stage** - preclinical, MCI, mild, moderate, or severe
+    2. **Address BBB considerations** - drug delivery to CNS
+    3. **Consider biomarker endpoints** - what measurable outcomes?
+    4. **Connect to genetics** - which risk gene variants does this address?
+
+# Tool Definitions
+# INDRA tools extend the default PubMed tools (same MCP server)
+tools:
+  search_tools:
+    indra_statements:
+      server: "default_pubmed"
+      mcp_tool_name: "query_mechanistic_statements"
+      display_name: "INDRA Mechanistic Statements"
+      description: "Query curated causal assertions from INDRA knowledge graph (e.g., TREM2 activates SYK)"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_mechanistic_statements` to find known mechanistic relationships.
+        - Accepts plain gene/protein names: agent="TREM2", other_agent="SYK"
+        - Relation types: Activation, Inhibition, Phosphorylation, IncreaseAmount, DecreaseAmount
+        - Can query by MeSH disease term: mesh_term="MESH:D000544" (Alzheimer disease)
+
+    indra_gene_disease:
+      server: "default_pubmed"
+      mcp_tool_name: "query_gene_disease_network"
+      display_name: "Gene-Disease Network"
+      description: "Find genes associated with a disease or diseases for a gene from INDRA"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_gene_disease_network` to explore gene-disease associations.
+        - Alzheimer disease: identifier="MESH:D000544" or "DOID:10652"
+        - AD risk genes: "HGNC:11730" (TREM2), "HGNC:613" (APOE), "HGNC:1052" (BIN1)
+        - Set entity_type="disease" or "gene", include_variants=true for genetic variants
+
+    indra_drug_info:
+      server: "default_pubmed"
+      mcp_tool_name: "query_drug_info"
+      display_name: "Drug Target/Indication Info"
+      description: "Query drug targets, indications, and side effects from INDRA"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_drug_info` to find drug repurposing candidates.
+        - Find drugs for a target: identifier="HGNC:11730", query_type="drugs_for_target"
+        - Find indications: identifier="CHEBI:...", query_type="indications"
+        - Check side effects: query_type="side_effects"
+
+    indra_codependents:
+      server: "default_pubmed"
+      mcp_tool_name: "query_gene_codependents"
+      display_name: "Gene Codependency"
+      description: "Find functionally linked gene partners from DepMap data"
+      category: "search"
+      enabled: true
+
+    indra_pathways:
+      server: "default_pubmed"
+      mcp_tool_name: "query_pathways"
+      display_name: "Biological Pathways"
+      description: "Query biological pathways for genes from INDRA knowledge graph"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_pathways` to find pathway context for AD risk genes.
+        - Single gene: gene_ids=["HGNC:11730"] (TREM2 pathways)
+        - Shared pathways: gene_ids=["HGNC:11730", "HGNC:613"] (TREM2 + APOE overlap)
+
+    indra_clinical_trials:
+      server: "default_pubmed"
+      mcp_tool_name: "query_clinical_trials"
+      display_name: "Clinical Trials"
+      description: "Find clinical trials for a disease or drug from INDRA"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_clinical_trials` to check what's been tried.
+        - AD trials: identifier="MESH:D000544", entity_type="disease"
+        - Drug trials: identifier="CHEBI:...", entity_type="drug"
+
+    indra_subnetwork:
+      server: "default_pubmed"
+      mcp_tool_name: "query_causal_subnetwork"
+      display_name: "Causal Subnetwork"
+      description: "Find causal paths and mediators between biological entities"
+      category: "search"
+      enabled: true
+
+    indra_enrichment:
+      server: "default_pubmed"
+      mcp_tool_name: "run_enrichment_analysis"
+      display_name: "Gene Set Enrichment"
+      description: "Run statistical enrichment on gene sets (GO terms, pathways, upstream regulators)"
+      category: "search"
+      enabled: true
+
+# Workflow Configurations
+workflows:
+  reflection:
+    search_tools:
+      - "indra_statements"
+
+# Reflection-Time Enrichments
+# Unlike post-generation enrichments (which call a tool per hypothesis at generation time),
+# these are populated during the reflection node using pre-fetched knowledge graph data.
+# Stored in hypothesis.enrichments[output_key] alongside any generation-time enrichments.
+enrichments:
+  - tool: "indra_statements"
+    input_field: "text"
+    output_key: "indra_evidence"
+    enabled: true
+
+# Global Settings
+settings:
+  merge_strategy: "extend"

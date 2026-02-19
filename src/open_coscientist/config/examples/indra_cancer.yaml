@@ -1,0 +1,193 @@
+# Cancer Precision Oncology - INDRA CoGex Configuration
+# Version 1.0
+#
+# Domain-specific configuration for cancer/oncology hypothesis generation.
+# Extends default PubMed config with INDRA knowledge graph tools and
+# cancer-focused prompt guidance.
+#
+# Example research goal:
+#   "What novel synthetic lethal interactions could be therapeutically exploited
+#    in KRAS G12C mutant non-small cell lung cancer, especially in patients
+#    who have developed resistance to sotorasib?"
+#
+# Requirements:
+# - MCP server with INDRA CoGex tools on default port (8888)
+# - PubMed still used for literature review (from default config)
+
+version: "1.0"
+
+# Domain-Specific Prompt Customizations
+prompts:
+  domain_context: |
+    ## Domain: Cancer Research - Precision Oncology
+
+    You are a cancer research scientist specializing in precision oncology,
+    molecular targeted therapy, and tumor genomics. Your audience includes
+    oncologists, molecular biologists, and translational researchers.
+
+    Key terminology:
+    - "Hypothesis" means a novel therapeutic mechanism, drug target,
+      resistance pathway, or biomarker insight for cancer treatment.
+    - "Experiment" means preclinical validation (cell line assays, animal
+      models, CRISPR screens) or clinical biomarker analysis.
+    - Literature sources include PubMed biomedical research and the INDRA
+      mechanistic knowledge graph (curated causal assertions from literature).
+
+    Focus areas: KRAS signaling, synthetic lethality, drug resistance,
+    immunotherapy combinations, tumor microenvironment, precision biomarkers.
+
+  generation_guidance: |
+    ## Cancer Hypothesis Generation Guidance
+
+    ### Hypothesis Categories
+    Generate hypotheses spanning diverse mechanistic categories:
+    1. **Synthetic lethal targets** - gene codependencies exploitable for therapy
+    2. **Resistance mechanisms** - why tumors escape targeted treatments
+    3. **Combination strategies** - rational drug combinations with mechanistic basis
+    4. **Biomarker-driven selection** - molecular markers for patient stratification
+    5. **Pathway crosstalk** - unexpected signaling connections
+
+    ### Hypothesis Format
+    Each hypothesis should follow:
+    "We hypothesize that [mechanism/target] can be exploited to [therapeutic outcome],
+    because [molecular rationale] in [specific cancer context]."
+
+  review_guidance: |
+    ## Cancer Review Criteria
+
+    Prioritize:
+    1. **Mechanistic plausibility** - consistent with known cancer signaling?
+    2. **Druggability** - can the target be reached with existing drug modalities?
+    3. **Clinical relevance** - addresses an unmet need in cancer treatment?
+    4. **Novelty** - goes beyond known therapeutic approaches?
+    5. **Testability** - can this be validated in cell lines or animal models?
+
+  reflection_guidance: |
+    ## Knowledge Graph Verification
+
+    When INDRA knowledge graph evidence is provided below, use it to:
+    - Verify whether the mechanistic claims in the hypothesis are supported
+      by curated literature evidence (known causal relationships)
+    - Check if the proposed pathway connections actually exist in the graph
+    - Identify if the mechanism is already well-established
+      (suggesting "already explained") or genuinely novel ("missing piece")
+    - Note contradictions between hypothesis claims and known interactions
+    Be concise. Do not repeat the INDRA evidence verbatim.
+
+  evolution_guidance: |
+    ## Cancer Evolution Priorities
+
+    When refining cancer hypotheses:
+    1. **Increase molecular specificity** - name specific genes, mutations, pathways
+    2. **Address resistance** - how does the approach handle therapeutic resistance?
+    3. **Consider patient selection** - which molecular subtype benefits most?
+    4. **Propose validation strategy** - what cell lines or models would test this?
+
+# Tool Definitions
+# INDRA tools extend the default PubMed tools (same MCP server)
+tools:
+  search_tools:
+    indra_statements:
+      server: "default_pubmed"
+      mcp_tool_name: "query_mechanistic_statements"
+      display_name: "INDRA Mechanistic Statements"
+      description: "Query curated causal assertions from INDRA knowledge graph (e.g., KRAS activates RAF1)"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_mechanistic_statements` to find known mechanistic relationships.
+        - Accepts plain gene/protein names: agent="KRAS", other_agent="RAF1"
+        - Relation types: Activation, Inhibition, Phosphorylation, IncreaseAmount, DecreaseAmount
+        - Can also query by MeSH disease term: mesh_term="MESH:D002289"
+
+    indra_gene_disease:
+      server: "default_pubmed"
+      mcp_tool_name: "query_gene_disease_network"
+      display_name: "Gene-Disease Network"
+      description: "Find genes associated with a disease or diseases for a gene from INDRA"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_gene_disease_network` to explore gene-disease associations.
+        - Diseases: identifier="DOID:3908" (NSCLC), "MESH:D008175" (lung neoplasms)
+        - Genes: identifier="HGNC:6407" (KRAS), "HGNC:3236" (EGFR)
+        - Set entity_type="disease" or "gene", include_variants=true for genetic variants
+
+    indra_drug_info:
+      server: "default_pubmed"
+      mcp_tool_name: "query_drug_info"
+      display_name: "Drug Target/Indication Info"
+      description: "Query drug targets, indications, and side effects from INDRA"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_drug_info` to look up drug-protein interactions.
+        - Find drugs for a target: identifier="HGNC:6407", query_type="drugs_for_target"
+        - Find targets for a drug: identifier="CHEBI:CHEBI:91399", query_type="targets"
+        - Also: query_type="indications" or "side_effects"
+
+    indra_codependents:
+      server: "default_pubmed"
+      mcp_tool_name: "query_gene_codependents"
+      display_name: "Gene Codependency (DepMap)"
+      description: "Find codependent/synthetic lethal gene partners from DepMap CRISPR screen data"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_gene_codependents` to find synthetic lethal partners.
+        - Input: gene_id="HGNC:6407" (KRAS)
+        - Returns genes whose essentiality is correlated (from DepMap CRISPR screens)
+        - Key for identifying novel therapeutic targets in cancer
+
+    indra_pathways:
+      server: "default_pubmed"
+      mcp_tool_name: "query_pathways"
+      display_name: "Biological Pathways"
+      description: "Query biological pathways for genes from INDRA knowledge graph"
+      category: "search"
+      enabled: true
+
+    indra_clinical_trials:
+      server: "default_pubmed"
+      mcp_tool_name: "query_clinical_trials"
+      display_name: "Clinical Trials"
+      description: "Find clinical trials for a disease or drug from INDRA"
+      category: "search"
+      enabled: true
+
+    indra_subnetwork:
+      server: "default_pubmed"
+      mcp_tool_name: "query_causal_subnetwork"
+      display_name: "Causal Subnetwork"
+      description: "Find causal paths and mediators between biological entities"
+      category: "search"
+      enabled: true
+
+    indra_enrichment:
+      server: "default_pubmed"
+      mcp_tool_name: "run_enrichment_analysis"
+      display_name: "Gene Set Enrichment"
+      description: "Run statistical enrichment on gene sets (GO terms, pathways, upstream regulators)"
+      category: "search"
+      enabled: true
+
+# Workflow Configurations
+# Only tools listed here are used during each workflow phase.
+# The reflection workflow gates INDRA pre-fetch: no entry = no calls.
+workflows:
+  reflection:
+    search_tools:
+      - "indra_statements"
+
+# Reflection-Time Enrichments
+# Populated during the reflection node using pre-fetched knowledge graph data.
+# Stored in hypothesis.enrichments[output_key].
+enrichments:
+  - tool: "indra_statements"
+    input_field: "text"
+    output_key: "indra_evidence"
+    enabled: true
+
+# Global Settings
+settings:
+  merge_strategy: "extend"
