@@ -312,6 +312,12 @@ class WorkflowConfig:
     read_tools: List[str] = field(default_factory=list)
     utility_tools: List[str] = field(default_factory=list)
 
+    # Knowledge-graph / external context tools called once per workflow phase.
+    # Results are injected as background context into the phase's synthesis prompt.
+    # Domain-agnostic: any workflow can list tools here; the node checks this field
+    # and skips enrichment when the list is empty.
+    context_enrichment_tools: List[str] = field(default_factory=list)
+
     # Query generation via MCP tool (replaces hardcoded prompts)
     query_generation_tool: Optional[str] = None
     query_format: str = "boolean"  # "boolean" for PubMed, "natural_language" for arXiv/Scholar
@@ -348,6 +354,7 @@ class WorkflowConfig:
             search_tools=data.get("search_tools", []),
             read_tools=data.get("read_tools", []),
             utility_tools=data.get("utility_tools", []),
+            context_enrichment_tools=data.get("context_enrichment_tools", []),
             query_generation_tool=data.get("query_generation_tool"),
             query_format=data.get("query_format", "boolean"),
             content_tool=data.get("content_tool"),
@@ -386,6 +393,7 @@ class WorkflowConfig:
         tools.extend(self.search_tools)
         tools.extend(self.read_tools)
         tools.extend(self.utility_tools)
+        tools.extend(self.context_enrichment_tools)
         return tools
 
 

@@ -104,6 +104,8 @@ tools:
         - Accepts plain gene/protein names: agent="TREM2", other_agent="SYK"
         - Relation types: Activation, Inhibition, Phosphorylation, IncreaseAmount, DecreaseAmount
         - Can query by MeSH disease term: mesh_term="MESH:D000544" (Alzheimer disease)
+      parameter_mapping:
+        entity_name: "agent"   # canonical entity_name → tool's 'agent' param
 
     indra_gene_disease:
       server: "default_pubmed"
@@ -117,6 +119,8 @@ tools:
         - Alzheimer disease: identifier="MESH:D000544" or "DOID:10652"
         - AD risk genes: "HGNC:11730" (TREM2), "HGNC:613" (APOE), "HGNC:1052" (BIN1)
         - Set entity_type="disease" or "gene", include_variants=true for genetic variants
+      parameter_mapping:
+        entity_name: "identifier"   # canonical entity_name → tool's 'identifier' param
 
     indra_drug_info:
       server: "default_pubmed"
@@ -180,7 +184,15 @@ tools:
       enabled: true
 
 # Workflow Configurations
+# context_enrichment_tools: called once per research goal during literature review,
+#   results injected as mechanistic background into the synthesis prompt.
+#   Uses the canonical 'entity_name' param mapped via each tool's parameter_mapping.
 workflows:
+  literature_review:
+    context_enrichment_tools:
+      - "indra_statements"
+      - "indra_gene_disease"
+
   reflection:
     search_tools:
       - "indra_statements"

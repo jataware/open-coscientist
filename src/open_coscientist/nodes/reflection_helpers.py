@@ -6,6 +6,7 @@ reflection analysis. Extracts likely gene/protein names from hypothesis
 text and queries INDRA for known causal relationships.
 """
 
+import asyncio
 import json
 import logging
 import re
@@ -103,20 +104,20 @@ def extract_entity_names(text: str, max_entities: int = 3) -> list[str]:
     return result[:max_entities]
 
 
-def get_reflection_tool_names(tool_registry: Optional[Any]) -> list[str]:
-    """Resolve which MCP tool names the yaml config assigned to reflection.
+def get_kg_tools_for_workflow(tool_registry: Optional[Any], workflow_name: str) -> list[str]:
+    """Resolve which MCP tool names the yaml config assigned to a workflow's search_tools.
 
     Returns an empty list when:
     - no tool_registry is configured
-    - no 'reflection' workflow exists in the yaml
+    - no workflow entry exists in the yaml
     - the workflow lists no enabled tools
 
-    This is the gate: if the list is empty, no reflection-time tool calls happen.
+    This is the gate: if the list is empty, no tool calls happen for that workflow.
     """
     if tool_registry is None:
         return []
     try:
-        tool_ids = tool_registry.get_tools_for_workflow("reflection")
+        tool_ids = tool_registry.get_tools_for_workflow(workflow_name)
         if not tool_ids:
             return []
         return tool_registry.get_mcp_tool_names(tool_ids)
@@ -128,12 +129,13 @@ async def fetch_indra_evidence(
     hypothesis_text: str,
     tool_registry: Optional[Any] = None,
     max_statements: int = 5,
+    workflow_name: str = "reflection",
 ) -> dict[str, Any]:
     """Pre-fetch mechanistic statements relevant to a hypothesis.
 
-    Only runs if the yaml config explicitly opts in via a 'reflection'
-    workflow section listing the tools to use. No workflow entry → no calls,
-    even if the MCP server happens to have the tools registered.
+    Only runs if the yaml config explicitly opts in via a workflow section
+    listing the tools to use. No workflow entry → no calls, even if the MCP
+    server happens to have the tools registered.
 
     Returns dict with:
         - "prompt_text": formatted string for LLM prompt injection
@@ -142,7 +144,7 @@ async def fetch_indra_evidence(
     """
     empty = {"prompt_text": "", "enrichment_items": []}
 
-    mcp_names = get_reflection_tool_names(tool_registry)
+    mcp_names = get_kg_tools_for_workflow(tool_registry, workflow_name)
     if not mcp_names:
         return empty
 
@@ -182,21 +184,31 @@ def _pick_available_tool(client: Any, mcp_names: list[str]) -> str:
     return ""
 
 
+async def _query_single_entity(
+    client: Any, tool_name: str, entity: str, max_per_entity: int,
+) -> list[dict]:
+    """Query a knowledge graph tool for one entity; returns its statements."""
+    try:
+        raw = await client.call_tool(
+            tool_name, agent=entity, limit=max_per_entity, evidence_limit=1,
+        )
+        result = _parse_tool_result(raw)
+        return result.get("statements", [])
+    except Exception as e:
+        logger.debug(f"entity query failed for '{entity}' via {tool_name}: {e}")
+        return []
+
+
 async def _query_entities(
     client: Any, tool_name: str, entities: list[str], max_per_entity: int,
 ) -> list[dict]:
-    """Query a knowledge graph tool for statements about each entity."""
-    all_stmts: list[dict] = []
-    for entity in entities[:2]:
-        raw = await client.call_tool(
-            tool_name,
-            agent=entity,
-            limit=max_per_entity,
-            evidence_limit=1,
-        )
-        result = _parse_tool_result(raw)
-        all_stmts.extend(result.get("statements", []))
-    return all_stmts
+    """Query a knowledge graph tool for all entities in parallel."""
+    tasks = [
+        _query_single_entity(client, tool_name, entity, max_per_entity)
+        for entity in entities[:2]
+    ]
+    results = await asyncio.gather(*tasks)
+    return [stmt for stmts in results for stmt in stmts]
 
 
 def _parse_tool_result(raw: Any) -> dict:

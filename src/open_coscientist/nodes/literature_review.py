@@ -39,6 +39,7 @@ from ..prompts import (
 from ..schemas import LITERATURE_QUERY_SCHEMA, LITERATURE_PAPER_ANALYSIS_SCHEMA
 from ..state import WorkflowState
 
+from .reflection_helpers import extract_entity_names
 from .literature_review_helpers import (
     SearchConfig,
     ContentToolConfig,
@@ -563,6 +564,180 @@ async def _phase2_5_fetch_content(
 
 
 # =============================================================================
+# Phase 2.6: Context enrichment (knowledge-graph / external tools)
+# =============================================================================
+
+# max chars injected into synthesis prompt from all enrichment tools combined
+_CONTEXT_ENRICHMENT_MAX_CHARS = 1500
+# max results requested per entity per tool call
+_CONTEXT_ENRICHMENT_RESULTS_PER_ENTITY = 4
+
+
+async def _call_enrichment_tool_for_entity(
+    tool_name: str,
+    mapped_params: Dict[str, Any],
+    mcp_client: MCPToolClient,
+) -> Any:
+    """Call one enrichment tool for one entity; returns raw result or None."""
+    try:
+        return await mcp_client.call_tool(tool_name, **mapped_params)
+    except Exception as e:
+        logger.debug(f"context enrichment call failed ({tool_name}): {e}")
+        return None
+
+
+def _parse_enrichment_result(raw: Any) -> str:
+    """Extract a compact text representation from an enrichment tool result.
+
+    Tries known structured formats first (statements list), falls back to
+    a truncated string representation so any tool response is usable.
+    """
+    import json as _json
+
+    data = raw
+    if isinstance(raw, str):
+        try:
+            data = _json.loads(raw)
+        except (ValueError, TypeError):
+            return raw[:300] if raw else ""
+
+    if isinstance(data, dict):
+        # INDRA mechanistic statements format
+        stmts = data.get("statements", [])
+        if stmts:
+            lines = []
+            for s in stmts[:_CONTEXT_ENRICHMENT_RESULTS_PER_ENTITY]:
+                subj = (s.get("subj") or {}).get("name", "")
+                obj = (s.get("obj") or {}).get("name", "")
+                rel = s.get("type", "")
+                belief = s.get("belief", 0)
+                if subj and obj:
+                    lines.append(f"- {subj} --[{rel}]--> {obj} (belief: {belief:.2f})")
+            return "\n".join(lines)
+
+        # generic list under "results" key
+        results = data.get("results", [])
+        if results:
+            return "\n".join(
+                str(r)[:120] for r in results[:_CONTEXT_ENRICHMENT_RESULTS_PER_ENTITY]
+            )
+
+        # last resort: compact dict repr
+        return str(data)[:300]
+
+    if isinstance(data, list):
+        return "\n".join(
+            str(item)[:120] for item in data[:_CONTEXT_ENRICHMENT_RESULTS_PER_ENTITY]
+        )
+
+    return str(data)[:300] if data else ""
+
+
+async def _call_enrichment_tool_for_entities(
+    tool_config: Any,
+    entities: List[str],
+    mcp_client: MCPToolClient,
+) -> str:
+    """Call one enrichment tool for all entities in parallel; returns formatted text."""
+    tool_name = tool_config.mcp_tool_name
+
+    canonical = {
+        "entity_name": "",  # placeholder, overridden per entity
+        "limit": _CONTEXT_ENRICHMENT_RESULTS_PER_ENTITY,
+    }
+
+    async def _query_one(entity: str) -> str:
+        params = tool_config.map_parameters({**canonical, "entity_name": entity})
+        raw = await _call_enrichment_tool_for_entity(tool_name, params, mcp_client)
+        return _parse_enrichment_result(raw) if raw is not None else ""
+
+    per_entity_results = await asyncio.gather(*[_query_one(e) for e in entities])
+
+    lines = []
+    for entity, text in zip(entities, per_entity_results):
+        if text:
+            lines.append(f"[{entity}]\n{text}")
+
+    return "\n\n".join(lines)
+
+
+async def _phase2_6_fetch_context_enrichment(
+    state: WorkflowState,
+    config: SearchConfig,
+    mcp_client: MCPToolClient,
+) -> str:
+    """Phase 2.6: fetch background context from configured knowledge-graph tools.
+
+    Completely YAML-driven: only runs when the literature_review workflow
+    lists tools under 'context_enrichment_tools'. Returns an empty string
+    when not configured, keeping lit review unchanged for other domains.
+
+    Calls all configured tools × all extracted entities in parallel.
+    Output is capped to avoid bloating the synthesis prompt.
+    """
+    workflow = config.workflow
+    if not workflow or not workflow.context_enrichment_tools:
+        return ""
+
+    tool_registry = config.tool_registry
+    if not tool_registry:
+        return ""
+
+    entities = extract_entity_names(state["research_goal"], max_entities=3)
+    if not entities:
+        logger.debug("context enrichment: no entities extracted from research goal")
+        return ""
+
+    logger.info(
+        f"Phase 2.6: fetching context enrichment for entities {entities} "
+        f"via {len(workflow.context_enrichment_tools)} tool(s)"
+    )
+
+    # resolve tool configs, skipping disabled or missing tools
+    tool_configs = []
+    for tool_id in workflow.context_enrichment_tools:
+        tc = tool_registry.get_tool(tool_id)
+        if tc and tc.enabled and mcp_client.has_tool(tc.mcp_tool_name):
+            tool_configs.append(tc)
+        else:
+            logger.debug(f"context enrichment: tool '{tool_id}' unavailable or disabled")
+
+    if not tool_configs:
+        return ""
+
+    # call all tools × all entities in parallel (outer: tools, inner: entities)
+    tool_tasks = [
+        _call_enrichment_tool_for_entities(tc, entities, mcp_client)
+        for tc in tool_configs
+    ]
+    tool_results = await asyncio.gather(*tool_tasks, return_exceptions=True)
+
+    # assemble sections per tool
+    sections = []
+    for tc, result in zip(tool_configs, tool_results):
+        if isinstance(result, Exception):
+            logger.debug(f"context enrichment: {tc.mcp_tool_name} raised {result}")
+            continue
+        if result:
+            sections.append(f"**{tc.display_name}**\n{result}")
+
+    if not sections:
+        return ""
+
+    combined = "\n\n".join(sections)
+
+    # hard cap to avoid inflating synthesis prompt
+    if len(combined) > _CONTEXT_ENRICHMENT_MAX_CHARS:
+        combined = combined[: _CONTEXT_ENRICHMENT_MAX_CHARS] + "\n[...truncated]"
+
+    logger.info(
+        f"Phase 2.6 complete: {len(sections)} tool(s) returned context "
+        f"({len(combined)} chars)"
+    )
+    return combined
+
+
+# =============================================================================
 # Phase 3: Paper analysis
 # =============================================================================
 
@@ -652,6 +827,7 @@ async def _phase3_analyze_papers(
 async def _phase4_synthesize(
     paper_analyses: List[Dict[str, Any]],
     state: WorkflowState,
+    background_context: str = "",
 ) -> str:
     """Phase 4: Synthesize across papers to create articles_with_reasoning."""
     if not paper_analyses:
@@ -664,6 +840,7 @@ async def _phase4_synthesize(
         prompt = get_literature_review_synthesis_prompt(
             research_goal=state["research_goal"],
             paper_analyses=paper_analyses,
+            background_context=background_context,
         )
 
         save_prompt_to_disk(
@@ -687,6 +864,14 @@ async def _phase4_synthesize(
 
         logger.info(f"Synthesis complete - length: {len(synthesis)} chars")
         logger.debug(f"Synthesis preview: {synthesis[:500]}...")
+
+        if background_context:
+            synthesis = (
+                synthesis
+                + "\n\n---\n\n## Knowledge Graph Evidence\n\n"
+                + background_context
+            )
+            logger.info("Appended knowledge graph context to synthesis output")
 
         return synthesis
 
@@ -762,8 +947,12 @@ async def literature_review_node(state: WorkflowState) -> Dict[str, Any]:
     # phase 2.4: discover PDF links
     await _phase2_4_discover_pdf_links(all_paper_metadata, paper_source_map, config, mcp_client)
 
-    # phase 2.5: fetch content
-    await _phase2_5_fetch_content(all_paper_metadata, paper_source_map, config, mcp_client, state)
+    # phase 2.5 + 2.6: fetch content and context enrichment in parallel
+    content_task = _phase2_5_fetch_content(
+        all_paper_metadata, paper_source_map, config, mcp_client, state
+    )
+    enrichment_task = _phase2_6_fetch_context_enrichment(state, config, mcp_client)
+    _, background_context = await asyncio.gather(content_task, enrichment_task)
 
     # check fulltext availability
     with_fulltext, without_fulltext = count_papers_with_fulltext(all_paper_metadata)
@@ -805,7 +994,7 @@ async def literature_review_node(state: WorkflowState) -> Dict[str, Any]:
 
     # phase 4: synthesize
     if paper_analyses:
-        synthesis = await _phase4_synthesize(paper_analyses, state)
+        synthesis = await _phase4_synthesize(paper_analyses, state, background_context)
     else:
         synthesis = LITERATURE_REVIEW_FAILED
 

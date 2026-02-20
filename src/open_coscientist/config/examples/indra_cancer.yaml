@@ -99,6 +99,8 @@ tools:
         - Accepts plain gene/protein names: agent="KRAS", other_agent="RAF1"
         - Relation types: Activation, Inhibition, Phosphorylation, IncreaseAmount, DecreaseAmount
         - Can also query by MeSH disease term: mesh_term="MESH:D002289"
+      parameter_mapping:
+        entity_name: "agent"   # canonical entity_name → tool's 'agent' param
 
     indra_gene_disease:
       server: "default_pubmed"
@@ -112,6 +114,8 @@ tools:
         - Diseases: identifier="DOID:3908" (NSCLC), "MESH:D008175" (lung neoplasms)
         - Genes: identifier="HGNC:6407" (KRAS), "HGNC:3236" (EGFR)
         - Set entity_type="disease" or "gene", include_variants=true for genetic variants
+      parameter_mapping:
+        entity_name: "identifier"   # canonical entity_name → tool's 'identifier' param
 
     indra_drug_info:
       server: "default_pubmed"
@@ -173,8 +177,16 @@ tools:
 
 # Workflow Configurations
 # Only tools listed here are used during each workflow phase.
+# context_enrichment_tools: called once per research goal during literature review,
+#   results injected as mechanistic background into the synthesis prompt.
+#   Uses the canonical 'entity_name' param mapped via each tool's parameter_mapping.
 # The reflection workflow gates INDRA pre-fetch: no entry = no calls.
 workflows:
+  literature_review:
+    context_enrichment_tools:
+      - "indra_statements"
+      - "indra_gene_disease"
+
   reflection:
     search_tools:
       - "indra_statements"

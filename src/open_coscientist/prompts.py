@@ -172,6 +172,7 @@ def _get_domain_variables(tool_registry: Optional[Any] = None) -> Dict[str, str]
         "domain_generation_guidance": "",
         "domain_review_guidance": "",
         "domain_evolution_guidance": "",
+        "domain_reflection_guidance": "",
     }
 
     if tool_registry is None:
@@ -794,7 +795,9 @@ def get_literature_review_paper_analysis_prompt(
 
 
 def get_literature_review_synthesis_prompt(
-    research_goal: str, paper_analyses: list[Dict[str, Any]]
+    research_goal: str,
+    paper_analyses: list[Dict[str, Any]],
+    background_context: str = "",
 ) -> str:
     """Get the prompt for synthesizing paper analyses."""
     # format paper analyses as structured text
@@ -821,9 +824,23 @@ def get_literature_review_synthesis_prompt(
 """
         analyses_text.append(paper_section)
 
+    background_context_section = (
+        "\n## Mechanistic Background (Knowledge Graph)\n\n"
+        "The following structured evidence was retrieved from external knowledge sources "
+        "to supplement the literature. Use it to ground the synthesis in known causal "
+        "relationships and flag where hypotheses can leverage or contradict this background.\n\n"
+        + background_context
+        if background_context
+        else ""
+    )
+
     return load_prompt(
         "literature_review_synthesis",
-        {"research_goal": research_goal, "paper_analyses": "\n\n".join(analyses_text)},
+        {
+            "research_goal": research_goal,
+            "paper_analyses": "\n\n".join(analyses_text),
+            "background_context_section": background_context_section,
+        },
     )
 
 
