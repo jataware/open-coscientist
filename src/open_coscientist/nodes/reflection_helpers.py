@@ -187,13 +187,16 @@ def _pick_available_tool(client: Any, mcp_names: list[str]) -> str:
     return ""
 
 
+_EVIDENCE_LIMIT = 25
+
+
 async def _query_single_entity(
     client: Any, tool_name: str, entity: str, max_per_entity: int,
 ) -> list[dict]:
     """Query a knowledge graph tool for one entity; returns its statements."""
     try:
         raw = await client.call_tool(
-            tool_name, agent=entity, limit=max_per_entity, evidence_limit=1,
+            tool_name, agent=entity, limit=max_per_entity, evidence_limit=_EVIDENCE_LIMIT,
         )
         result = _parse_tool_result(raw)
         return result.get("statements", [])
@@ -245,11 +248,17 @@ def _format_evidence(statements: list[dict], queried_entities: list[str]) -> str
     return "\n".join(lines) if len(lines) > 1 else ""
 
 
+def _ev_count_str(ev_count: int) -> str:
+    """Format evidence count, appending '+' when truncated at the fetch limit."""
+    return f"{ev_count}+" if ev_count >= _EVIDENCE_LIMIT else str(ev_count)
+
+
 def _format_single_statement(stmt: dict) -> str:
     """Format one INDRA statement as a concise line."""
     rel_type = stmt.get("type", "Unknown")
     belief = stmt.get("belief", 0)
     ev_count = len(stmt.get("evidence", []))
+    ev_str = _ev_count_str(ev_count)
 
     subj = _agent_name(stmt, "subj")
     obj = _agent_name(stmt, "obj")
@@ -257,7 +266,7 @@ def _format_single_statement(stmt: dict) -> str:
     if subj and obj:
         return (
             f"- {subj} --[{rel_type}]--> {obj} "
-            f"(belief: {belief:.2f}, {ev_count} evidence)"
+            f"(belief: {belief:.2f}, {ev_str} papers)"
         )
 
     # complex/family statements have members instead of subj/obj
@@ -267,7 +276,7 @@ def _format_single_statement(stmt: dict) -> str:
         if names:
             return (
                 f"- Complex({', '.join(names)}) [{rel_type}] "
-                f"(belief: {belief:.2f}, {ev_count} evidence)"
+                f"(belief: {belief:.2f}, {ev_str} papers)"
             )
 
     return ""
@@ -306,7 +315,7 @@ def _statement_to_enrichment_item(stmt: dict) -> dict[str, str] | None:
             "relationship": f"{subj} \u2192 {obj}",
             "type": rel_type,
             "belief": f"{belief:.0%}",
-            "evidence_count": str(ev_count),
+            "evidence_count": _ev_count_str(ev_count),
         }
 
     members = stmt.get("members", [])
@@ -317,7 +326,7 @@ def _statement_to_enrichment_item(stmt: dict) -> dict[str, str] | None:
                 "relationship": f"Complex({', '.join(names)})",
                 "type": rel_type,
                 "belief": f"{belief:.0%}",
-                "evidence_count": str(ev_count),
+                "evidence_count": _ev_count_str(ev_count),
             }
 
     return None
