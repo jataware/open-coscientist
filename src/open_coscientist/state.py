@@ -221,6 +221,11 @@ class WorkflowState(TypedDict):
     tool_registry: Optional[Any]
     """Optional ToolRegistry for config-driven tool selection."""
 
+    context_enrichment_sources: Optional[List[Dict[str, Any]]]
+    """Structured sources returned by context enrichment tools during literature review
+    (e.g., INDRA mechanistic statements). Used to build [KG1]-style citation keys
+    for hypothesis generation. Domain-agnostic: any enrichment tool can populate this."""
+
 
 class WorkflowConfig(TypedDict):
     """Configuration for the hypothesis generation workflow."""

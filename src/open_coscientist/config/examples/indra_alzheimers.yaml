@@ -198,14 +198,15 @@ workflows:
       - "indra_statements"
 
 # Reflection-Time Enrichments
-# Unlike post-generation enrichments (which call a tool per hypothesis at generation time),
-# these are populated during the reflection node using pre-fetched knowledge graph data.
-# Stored in hypothesis.enrichments[output_key] alongside any generation-time enrichments.
+# Populated during the reflection node using entity-level knowledge graph lookups.
+# workflow: "reflection" prevents the generation coordinator from calling these
+# tools with whole-hypothesis text (wrong call signature for INDRA tools).
 enrichments:
   - tool: "indra_statements"
     input_field: "text"
     output_key: "indra_evidence"
     enabled: true
+    workflow: "reflection"
 
 # Global Settings
 settings:

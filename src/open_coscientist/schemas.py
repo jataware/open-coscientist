@@ -30,7 +30,7 @@ GENERATION_SCHEMA: Dict[str, Any] = {
                         },
                         "literature_grounding": {
                             "type": "string",
-                            "description": "Explicit citations in format (Author et al., year) for single citation or (Author1 et al., year; Author2 et al., year) for multiple citations. Connect specific findings to hypothesis. 2-4 sentences with citations. If no literature review is available, state that explicitly.",
+                            "description": "2-4 sentences grounding the hypothesis in the provided reference list. Use ONLY the bracketed [C*] citation keys supplied (e.g. [C1], [C2], [C3]) — do NOT invent author-year citations. If no reference list was provided, state that explicitly.",
                         },
                         "experiment": {
                             "type": "string",
@@ -77,7 +77,7 @@ GENERATION_DRAFT_SCHEMA: Dict[str, Any] = {
                         },
                         "literature_sources": {
                             "type": "string",
-                            "description": "Specific papers from literature review that informed this gap, cited using (Author et al., year) format. Example: 'Based on findings in retinal imaging (Smith et al., 2025) and gaps identified regarding tau isoforms (Jones et al., 2024; Brown et al., 2025).'",
+                            "description": "Sources from the reference list that informed this gap. Use ONLY the bracketed [C*] keys provided (e.g. [C1], [C2], [C3]). Example: 'Gap identified via retinal imaging findings [C1] and tau isoform research [C2][C3].'",
                         },
                     },
                     "required": [
@@ -118,7 +118,7 @@ HYPOTHESIS_VALIDATION_SYNTHESIS_SCHEMA: Dict[str, Any] = {
                         },
                         "literature_grounding": {
                             "type": "string",
-                            "description": "Explicit citations in format (Author et al., year) for single citation or (Author1 et al., year; Author2 et al., year) for multiple citations. Connect specific findings to hypothesis. 2-4 sentences with citations. If no literature review is available, state that explicitly.",
+                            "description": "2-4 sentences grounding the hypothesis in the provided reference list. Use ONLY the bracketed [C*] citation keys supplied (e.g. [C1], [C2], [C3]) — do NOT invent author-year citations. If no reference list was provided, state that explicitly.",
                         },
                         "experiment": {
                             "type": "string",

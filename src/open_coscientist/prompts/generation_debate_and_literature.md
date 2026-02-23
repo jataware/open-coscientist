@@ -64,6 +64,8 @@ The following represents an analysis of relevant scientific literature:
 {{articles_with_reasoning}}
 #END LITERATURE REVIEW#
 
+{{citation_reference_section}}
+
 ## Pre-Curated Papers (Available for Reference)
 
 {{articles_metadata}}

@@ -868,6 +868,7 @@ def get_hypothesis_validation_synthesis_prompt(
     hypotheses_with_analyses: list[Dict[str, Any]],
     articles: List[Any] | None = None,
     tool_registry: Optional[Any] = None,
+    reference_list: str = "",
 ) -> str:
     """
     Get the prompt for validation synthesis based on novelty analyses.
@@ -917,6 +918,7 @@ def get_hypothesis_validation_synthesis_prompt(
         "research_goal": research_goal,
         "hypotheses_with_analyses": "\n\n".join(hypotheses_text),
         "articles_metadata": format_articles_metadata(articles or []),
+        "citation_reference_section": _build_citation_reference_section(reference_list),
     }
 
     # inject domain-specific prompt customizations
@@ -932,6 +934,7 @@ def get_validation_synthesis_prompt_with_tools(
     articles_with_reasoning: str | None = None,
     max_iterations: int = 8,
     tool_registry: Optional[Any] = None,
+    reference_list: str = "",
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
     Get prompt for validation synthesis with tool access.
@@ -995,6 +998,7 @@ def get_validation_synthesis_prompt_with_tools(
         "articles_metadata": format_articles_metadata(articles or []),
         "articles_with_reasoning": articles_with_reasoning
         or "no literature review summary available.",
+        "citation_reference_section": _build_citation_reference_section(reference_list or ""),
         "max_iterations": max_iterations,
         "tool_instructions": tool_instructions,
     }
@@ -1016,6 +1020,7 @@ def get_debate_generation_prompt(
     articles_with_reasoning: str | None = None,
     articles: List[Any] | None = None,
     tool_registry: Optional[Any] = None,
+    reference_list: str = "",
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
     Get the debate-based hypothesis generation prompt.
@@ -1056,6 +1061,7 @@ def get_debate_generation_prompt(
 
     # add article metadata for citations
     variables["articles_metadata"] = format_articles_metadata(articles or [])
+    variables["citation_reference_section"] = _build_citation_reference_section(reference_list or "")
 
     # Format supervisor guidance if available
     if supervisor_guidance and isinstance(supervisor_guidance, dict):
@@ -1123,12 +1129,12 @@ Clear explanation for technical audiences in layman terms (4-6 sentences).
 Example: "This approach addresses the computational bottleneck by focusing on early layers where precursor signals first emerge. Rather than analyzing static magnitudes, the technique tracks velocity—the rate of change—which provides earlier detection of trajectories toward dangerous outputs. The system employs autoencoders to identify danger features, with dynamic gating that triggers only when trajectories cross a learned threshold."
 
 ### 3. literature_grounding (required)
-Explicit grounding with proper citations (2-4 sentences).
-- Use (Author et al., year) format consistently
-- Connect specific findings from literature to hypothesis
-- If no literature available, state: "This hypothesis is formulated without access to a literature review."
+Explicit grounding with inline citation keys (2-4 sentences).
+- If a Citation Reference List was provided above, use ONLY those `[C*]` keys (e.g. `[C1]`, `[C2]`, `[C3]`)
+- Do NOT invent author-year citations — only use keys from the list
+- If no Citation Reference List was provided, state: "This hypothesis is formulated without access to a literature review."
 
-Example: "This approach builds on recent work in autoencoder analysis (Templeton et al., 2024) and circuit tracing (Conmy et al., 2023). The velocity monitoring concept addresses a gap in current methods that focus on static analysis (Marks et al., 2024)."
+Example: "This approach builds on sparse autoencoder analysis [C1] and circuit tracing [C2]. The velocity monitoring concept addresses a gap in static-analysis methods [C3][C4]."
 
 ### 4. experiment (required)
 Concrete experiment design with models, datasets, methodology, metrics, and validation (4-6 sentences).
@@ -1296,6 +1302,24 @@ You can use tools to:
 """
 
 
+def _build_citation_reference_section(reference_list: str) -> str:
+    """Build the Citation Reference List prompt section.
+
+    Returns an empty string when reference_list is empty so the LLM
+    never sees citation instructions that don't apply to its run.
+    The section is intentionally domain-agnostic — no INDRA/KG language.
+    """
+    if not reference_list.strip():
+        return ""
+    return (
+        "\n## Citation Reference List\n\n"
+        "Use **only** these `[C*]` citation keys inline in `literature_grounding` "
+        "— do NOT invent author-year citations.\n\n"
+        + reference_list
+        + "\n"
+    )
+
+
 def build_tool_instructions(
     tool_ids: List[str],
     tool_registry: Optional[Any] = None,
@@ -1363,6 +1387,7 @@ def get_draft_prompt_with_tools(
     instructions: str | None = None,
     max_iterations: int = 8,
     tool_registry: Optional[Any] = None,
+    reference_list: str = "",
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
     Get prompt for Phase 1: drafting hypotheses with tools.
@@ -1402,6 +1427,7 @@ def get_draft_prompt_with_tools(
         "articles_with_reasoning": articles_with_reasoning
         or "no literature review summary available - examine papers below directly.",
         "articles_metadata": format_articles_metadata(articles or []),
+        "citation_reference_section": _build_citation_reference_section(reference_list or ""),
         "max_iterations": max_iterations,
         "instructions": instructions
         or "Focus on creative ideation - draft diverse hypotheses based on literature gaps.",

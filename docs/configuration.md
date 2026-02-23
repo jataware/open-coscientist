@@ -14,6 +14,7 @@ generator = HypothesisGenerator(
     evolution_max_count=3,                  # How many to evolve and keep
     enable_cache=True,                      # LLM response caching
     cache_dir=".coscientist_cache",         # Cache location (relative to CWD)
+    tools_config="path/to/tools.yaml",      # Optional: custom domain/source config
 )
 ```
 
@@ -23,12 +24,13 @@ See constants.py for other defaults.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `model_name` | `"gemini/gemini-2.5-flash"` | LLM model in LiteLLM format (e.g., `"claude-3-5-sonnet-20241022"`, `"gpt-4"`, `"gemini/gemini-2.5-flash"`) |
+| `model_name` | `"gemini/gemini-2.5-flash"` | LLM model in LiteLLM format (e.g., `"claude-sonnet-4-6"`, `"gpt-4o"`, `"gemini/gemini-2.5-flash"`) |
 | `max_iterations` | `1` | Number of refinement cycles (0 = no evolution/meta-review phase) |
 | `initial_hypotheses_count` | `5` | Initial hypothesis pool size |
 | `evolution_max_count` | `3` | Number of top hypotheses to evolve in each iteration |
 | `enable_cache` | `True` | Enable LLM response caching for faster iteration |
 | `cache_dir` | `".coscientist_cache"` | Cache directory (relative or absolute path) |
+| `tools_config` | `None` | Path to a custom YAML tools configuration file; see [Literature Review Tools Configuration](literature_review_tools_configuration.md) |
 
 ## Model Selection
 
@@ -51,7 +53,7 @@ generator = HypothesisGenerator(model_name="gpt-4o")
 export ANTHROPIC_API_KEY="your-key-here"
 
 # Use in code
-generator = HypothesisGenerator(model_name="claude-4-5-sonnet")
+generator = HypothesisGenerator(model_name="claude-sonnet-4-6")
 ```
 
 ### Google Gemini
@@ -99,6 +101,7 @@ async for node_name, state in generator.generate_hypotheses(
 |--------|---------|-------------|
 | `enable_literature_review_node` | `True` (if MCP available) | Enable/disable literature review node |
 | `enable_tool_calling_generation` | `False` | Allow Generate node to use MCP tools (requires literature review) |
+| `dev_test_lit_tools_isolation` | `False` | Forces all hypotheses through tool-calling generation (no debate) and forces literature review node caching. Development/testing only. |
 
 See [MCP Integration](mcp-integration.md) for details on literature review modes.
 
@@ -218,10 +221,10 @@ generator = HypothesisGenerator(
 
 ```python
 generator = HypothesisGenerator(
-    model_name="claude-sonnet-4-5-20250929",  # High-quality model
     max_iterations=4,                         # Multiple refinement cycles
     initial_hypotheses_count=8,               # Larger diverse pool
     evolution_max_count=6,                    # Evolve more hypotheses
+    model_name="claude-sonnet-4-6",    # High-quality model
 )
 ```
 

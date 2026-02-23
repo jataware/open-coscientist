@@ -21,6 +21,8 @@ The following represents an analysis of relevant scientific literature:
 {{articles_metadata}}
 #END LITERATURE REVIEW#
 
+{{citation_reference_section}}
+
 ## Draft Hypotheses with Novelty Analyses
 
 {{hypotheses_with_analyses}}
@@ -29,7 +31,7 @@ The following represents an analysis of relevant scientific literature:
 
 For each draft hypothesis, decide whether to **approve**, **refine**, or **pivot** based on the novelty analyses provided.
 
-**IMPORTANT:** When creating the final literature grounding, use the papers mentioned in the draft's "literature sources" field as your primary citation basis. The draft identified those specific papers during gap analysis - cite them with proper (Author et al., year) format.
+**IMPORTANT:** Use the citation keys from the draft's "literature sources" field as your primary basis. Carry those `[C*]` keys directly into `literature_grounding` — do NOT convert them to author-year format.
 
 ### Decision Criteria
 
@@ -82,28 +84,23 @@ A clear explanation of the approach for technical audiences (e.g., DARPA program
 ### 3. Literature Grounding (required)
 **MANDATORY:** Explicit grounding in the literature review provided above with proper citations.
 
-**CITATION FORMAT:** Use parenthetical (Author et al., year) format consistently. Place citations at the END of statements, not as narrative subjects.
+**CITATION FORMAT:** If a Citation Reference List was provided, use **only** those `[C*]` keys inline — do NOT invent author-year citations.
 
-**Correct (parenthetical):**
-- "Plasma extracellular vesicles serve as early biomarkers (Malek-Ahmadi et al., 2026)."
-- "Multiple studies have demonstrated this approach (Verón et al., 2026; Bazarbekov et al., 2026)."
+**Correct:**
+- "Plasma extracellular vesicles serve as early biomarkers [C1]."
+- "Multiple studies have demonstrated this approach [C2][C3]."
 
-**INCORRECT (narrative):**
-- "Malek-Ahmadi et al. (2026) showed that plasma extracellular vesicles..."
-- "Verón et al. (2026) demonstrated..."
+**INCORRECT:** Author-year text like "(Malek-Ahmadi et al., 2026)" — keys only.
 
 **Requirements:**
-- **CRITICAL: Use the draft's "literature sources" as your primary citation basis** - the draft identified specific papers during gap analysis, cite those papers in your literature grounding
-- The novelty analyses provide additional context about overlap/novelty, but the draft's literature sources should anchor your citations
-- Cite specific papers/articles from the literature review that support this hypothesis
-- Explain how findings from these papers inform or motivate the hypothesis
-- Reference specific techniques, results, or gaps identified in the literature
-- If multiple papers contributed, cite all relevant ones
-- 2-4 sentences with explicit citations
-- **Connect back to the gap reasoning** - explain how the papers cited relate to the specific gap the draft identified
+- **CRITICAL: Use the draft's "literature sources" citation keys as your primary basis** — carry them into your literature grounding
+- Cite specific sources from the reference list that support this hypothesis
+- Explain how the cited findings motivate or inform the hypothesis
+- 2-4 sentences with inline citation keys
+- **Connect back to the gap reasoning** — explain how the cited sources relate to the specific gap
 
-**Example (correct parenthetical style):**
-"This approach builds on recent work in sparse autoencoder (SAE) analysis and circuit tracing methodologies (Templeton et al., 2024; Conmy et al., 2023). The 'velocity' monitoring concept addresses a gap where current methods focus on static activation analysis rather than temporal dynamics (Marks et al., 2024). The adversarial hardening component is motivated by research showing that interpretability tools themselves can be exploited (Casper et al., 2024), necessitating robust monitoring approaches."
+**Example:**
+"This approach builds on sparse autoencoder analysis [C1] and circuit tracing work [C2]. The velocity monitoring concept addresses a gap where current methods focus on static activation analysis [C3]. Additional mechanistic evidence supports the causal pathway [C4]."
 
 ### 4. Practical Experiment (required)
 A concrete, actionable experiment design to test the hypothesis. Structure with clear sections:

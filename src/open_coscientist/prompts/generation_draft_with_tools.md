@@ -36,6 +36,8 @@ The literature review node already analyzed papers and identified key themes. Us
 
 #END LITERATURE REVIEW#
 
+{{citation_reference_section}}
+
 ## Your Task
 
 **Goal**: Draft {{hypotheses_count}} initial hypothesis ideas by examining relevant literature.
@@ -63,7 +65,7 @@ The literature review node already analyzed papers and identified key themes. Us
    - Draft {{hypotheses_count}} initial hypotheses
    - Each should address a DIFFERENT gap or approach
    - Include brief reasoning for why this gap exists
-   - **Cite specific papers using (Author et al., year) format** that informed your gap identification
+   - **Cite using the `[C*]` keys from the Citation Reference List** (if provided) that informed your gap
    - Don't worry about novelty validation yet - focus on creative, diverse ideas
 
 ## Available Tools
@@ -86,7 +88,7 @@ The literature review node already analyzed papers and identified key themes. Us
 3. Identify potential mechanisms or relationships
 4. Explore a UNIQUE approach compared to other drafts
 5. Include brief reasoning about the gap it addresses
-6. **Cite specific papers using (Author et al., year) format** that informed the gap
+6. **Cite using `[C*]` keys from the Citation Reference List** (if provided) that informed the gap
 
 {{instructions}}
 
@@ -103,7 +105,7 @@ The literature review node already analyzed papers and identified key themes. Us
       "hypothesis": "Dense technical hypothesis following 'We want to develop [X] to enable [Y]' format (2-3 sentences)",
       "explanation": "Step-by-step layman explanation (4-6 sentences)",
       "gap_reasoning": "Brief explanation of what gap in the literature this hypothesis addresses and why it seems promising",
-      "literature_sources": "Specific papers from literature review cited in (Author et al., year) format. Example: 'Based on retinal imaging findings (Smith et al., 2025) and identified gaps regarding tau isoforms (Jones et al., 2024; Brown et al., 2025).'",
+      "literature_sources": "Bracketed citation keys from the reference list that informed this gap. Example: 'Gap identified via retinal imaging [P1] and mechanistic data [KG1].'",
       "experiment": "Concrete experiment design with models, datasets, metrics, and validation criteria (4-6 sentences)"
     }
   ]
@@ -114,7 +116,7 @@ The literature review node already analyzed papers and identified key themes. Us
 - `hypothesis`: Technical formulation following "We want to develop [X] to enable [Y]" format
 - `explanation`: Clear explanation for technical audiences in layman terms
 - `gap_reasoning`: What research gap this addresses and why it's promising
-- `literature_sources`: **CRITICAL - Use proper citations in (Author et al., year) format for papers from the literature review. Example: "This gap was identified in retinal imaging studies (Smith et al., 2025) and tau proteoform research (Jones et al., 2024)."**
+- `literature_sources`: **CRITICAL - Use ONLY `[C*]` keys from the Citation Reference List (if provided). Do NOT invent author-year citations.**
 - `experiment`: Concrete, actionable experiment design to test the hypothesis
 
 **Text formatting guidelines:**

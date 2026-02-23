@@ -21,6 +21,8 @@ The following represents an analysis of relevant scientific literature:
 {{articles_metadata}}
 #END LITERATURE REVIEW#
 
+{{citation_reference_section}}
+
 ## Draft Hypotheses with Novelty Analyses
 
 {{hypotheses_with_analyses}}
@@ -40,7 +42,7 @@ You can use tools to search for additional papers or query PDF content when maki
 
 For each draft hypothesis, decide whether to **approve**, **refine**, or **pivot** based on the novelty analyses provided. Use tools when needed to verify your decisions.
 
-**IMPORTANT:** When creating the final literature grounding, use the papers mentioned in the draft's "literature sources" field as your primary citation basis. The draft identified those specific papers during gap analysis - cite them with proper (Author et al., year) format.
+**IMPORTANT:** Use the citation keys from the draft's "literature sources" field as your primary basis. Carry those `[C*]` keys directly into `literature_grounding` — do NOT convert them to author-year format.
 
 ### Decision Criteria
 
@@ -93,18 +95,19 @@ A clear explanation of the approach for technical audiences (e.g., DARPA program
 ### 3. Literature Grounding (required)
 **MANDATORY:** Explicit grounding in the literature review provided above with proper citations.
 
-**CITATION FORMAT:** Use parenthetical (Author et al., year) format consistently. Place citations at the END of statements, not as narrative subjects.
+**CITATION FORMAT:** If a Citation Reference List was provided, use **only** those `[C*]` keys inline — do NOT invent author-year citations.
 
-**Correct (parenthetical):**
-- "Plasma extracellular vesicles serve as early biomarkers (Malek-Ahmadi et al., 2026)."
-- "Multiple studies have demonstrated this approach (Veron et al., 2026; Bazarbekov et al., 2026)."
+**Correct:**
+- "Plasma extracellular vesicles serve as early biomarkers [C1]."
+- "Multiple studies have demonstrated this approach [C2][C3]."
+
+**INCORRECT:** Author-year text like "(Malek-Ahmadi et al., 2026)" — keys only.
 
 **Requirements:**
-- **CRITICAL: Use the draft's "literature sources" as your primary citation basis**
-- The novelty analyses provide additional context about overlap/novelty, but the draft's literature sources should anchor your citations
-- Cite specific papers/articles from the literature review that support this hypothesis
-- If you searched for additional papers using tools, cite those as well
-- 2-4 sentences with explicit citations
+- **CRITICAL: Use the draft's "literature sources" citation keys as your primary basis** — carry them into your literature grounding
+- Cite specific sources from the reference list that support this hypothesis
+- If you searched for additional papers using tools and they appear in the reference list, cite those keys too
+- 2-4 sentences with inline citation keys
 
 ### 4. Practical Experiment (required)
 A concrete, actionable experiment design to test the hypothesis. Structure with clear sections:

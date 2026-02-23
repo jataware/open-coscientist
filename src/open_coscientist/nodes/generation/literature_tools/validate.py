@@ -30,6 +30,7 @@ from ....schemas import (
 )
 from ....state import WorkflowState
 from ....tools.literature import literature_tools
+from ..citations import resolve_citation_keys
 from ....tools.provider import HybridToolProvider
 from ....tools.response_parser import ResponseParser
 
@@ -149,6 +150,7 @@ async def validate_hypotheses(
     draft_hypotheses: List[Dict[str, str]],
     mcp_client: Any,
     tool_registry: Optional["ToolRegistry"] = None,
+    reference_index: Optional[Any] = None,
 ) -> List[Hypothesis]:
     """
     Phase 2: validate novelty and refine/pivot drafts
@@ -337,6 +339,7 @@ async def validate_hypotheses(
         )
 
         # get prompt with tool instructions
+        ref_text = reference_index.text if reference_index else ""
         synthesis_prompt, schema = get_validation_synthesis_prompt_with_tools(
             research_goal=research_goal,
             hypotheses_with_analyses=batch,
@@ -344,6 +347,7 @@ async def validate_hypotheses(
             articles_with_reasoning=state.get("articles_with_reasoning"),
             max_iterations=max_iterations,
             tool_registry=tool_registry,
+            reference_list=ref_text,
         )
 
         # save prompt to disk for debugging
@@ -455,6 +459,7 @@ async def validate_hypotheses(
 
     # create Hypothesis objects from synthesis
     # output order matches hypotheses_with_analyses order (batched sequentially)
+    ref_sources = reference_index.sources if reference_index else {}
     hypotheses = []
     for i, hyp_data in enumerate(all_validated_hypotheses):
 
@@ -463,12 +468,7 @@ async def validate_hypotheses(
         literature_grounding = hyp_data.get("literature_grounding")
         experiment = hyp_data.get("experiment")
 
-        # extract only the papers actually cited by THIS hypothesis
-        papers_used = []
-        if i < len(hypotheses_with_analyses):
-            papers_used = _extract_papers_for_hypothesis(
-                hypotheses_with_analyses[i], literature_grounding
-            )
+        citation_map = resolve_citation_keys(literature_grounding, ref_sources)
 
         hypothesis = Hypothesis(
             text=hypothesis_text,
@@ -479,7 +479,7 @@ async def validate_hypotheses(
             score=0.0,
             elo_rating=INITIAL_ELO_RATING,
             generation_method="literature_tools",
-            papers_used=papers_used,
+            citation_map=citation_map,
         )
         hypotheses.append(hypothesis)
 

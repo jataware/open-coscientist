@@ -1,18 +1,22 @@
+# Literature Review Tools Configuration
 
 ## Overview
 
-Open-coscientist uses a **YAML-based configuration system** to decouple literature review tools from the core library. This allows you to:
+Open Coscientist uses a **YAML-based configuration system** to decouple literature review tools from the core library. This allows you to:
 
 - Bring your own MCP servers without modifying open-coscientist code
 - Configure multiple literature sources (PubMed, arXiv, Google Scholar, etc.)
 - Define custom response parsing, prompt instructions, and parameter mappings
 - Mix and match tools from different MCP servers
+- Inject domain-specific prompt guidance without touching source code
 
-The default configuration (`../tools.yaml`) provides a reference implementation using the bundled PubMed MCP server (See mcp_server at the top leve of this repo).
+The default configuration (`src/open_coscientist/config/tools.yaml`) provides a reference implementation using the bundled PubMed MCP server (see `mcp_server/` at the top level of this repo).
+
+For how to use these configs to adapt the system to a specific domain, see [Domain Customization](domain-customization.md).
 
 ## Example Configurations
 
-See the [examples folder](../src/open_coscientist/config/examples/) (README and YAML files) for example configurations. They all use the _replace_ merge strategy—replacing completely the reference built-in `config/tools.yaml` in this project. See [Merge Strategies](#merge-strategies) for an overview of all merge strategies available.
+See the [examples folder](../src/open_coscientist/config/examples/) (README and YAML files) for example configurations. See [Merge Strategies](#merge-strategies) for an overview of how user configs interact with the built-in defaults.
 
 ## YAML Configuration Schema
 
@@ -27,6 +31,16 @@ servers:
     transport: "streamable_http"
     enabled: true
 
+prompts:
+  domain_context: |
+    # Optional: injected into generation, review, and evolution prompts
+  generation_guidance: |
+    # Optional: additional instructions for the Generate node
+  review_guidance: |
+    # Optional: additional criteria for the Review node
+  evolution_guidance: |
+    # Optional: additional priorities for the Evolve node
+
 tools:
   search_tools:
     tool_id:
@@ -39,12 +53,21 @@ tools:
 workflows:
   literature_review:
     # Workflow configuration (see below)
+  draft_generation:
+    # Tools available to the Generate node in tool-calling mode
+  validation:
+    # Tools available for novelty validation
+
+enrichments:
+  # Post-generation per-hypothesis tool calls (see below)
 
 settings:
   auto_discover: true
   merge_strategy: "replace"
   allow_disable_builtins: true
 ```
+
+---
 
 ### Server Configuration
 
@@ -65,6 +88,41 @@ servers:
 
 ---
 
+### Prompt Customization
+
+The `prompts` section injects domain-specific text into workflow prompts without requiring any code changes. All fields are optional.
+
+| Field | Injected Into |
+|-------|--------------|
+| `domain_context` | Supervisor, Generate, Review, Evolve nodes |
+| `generation_guidance` | Generate node |
+| `review_guidance` | Review node |
+| `evolution_guidance` | Evolve node |
+
+**Example (cybersecurity domain):**
+```yaml
+prompts:
+  domain_context: |
+    ## Domain: Offensive Cybersecurity Research
+
+    You are a cybersecurity research scientist. "Hypothesis" means a threat
+    hypothesis — a novel attack technique or adversarial capability.
+
+  generation_guidance: |
+    ## Attack Categories to Consider
+    Generate hypotheses spanning: novel exploitation, evasion techniques,
+    AI-augmented attacks, supply chain compromise, and post-exploitation.
+
+  review_guidance: |
+    ## Cybersecurity Review Criteria
+    Prioritize: operational feasibility, novelty over existing TTPs,
+    impact potential, evasion potential, and defensive value.
+```
+
+See the [examples folder](../src/open_coscientist/config/examples/) for complete domain-specific configurations.
+
+---
+
 ### Tool Configuration
 
 Tools are organized into categories: `search_tools`, `read_tools`, `utility_tools`.
@@ -78,7 +136,7 @@ Tools are organized into categories: `search_tools`, `read_tools`, `utility_tool
 | `display_name` | string | Yes | Human-readable name |
 | `description` | string | Yes | Tool description |
 | `category` | string | Yes | `"search"` or `"search_with_content"` |
-| `source_type` | string | Yes | `"academic"`, `"preprint"`, `"pubmed"`, `"knowledge_graph"` |
+| `source_type` | string | Yes | See [Source Types](#source-type-and-query-generation) |
 | `enabled` | boolean | Yes | Enable/disable tool |
 | `response_format` | object | Yes | How to parse MCP response (see below) |
 | `parameter_mapping` | object | No | Map canonical params to tool params |
@@ -152,8 +210,6 @@ workflows:
       - tool: "pubmed_fulltext"
         papers_per_query: 4
         enabled: true
-        # content_tool: "read_pdf"       # Optional: specify content tool
-        # content_url_field: "pdf_url"   # Field containing content URL
 
       - tool: "google_scholar_search"
         papers_per_query: 2
@@ -179,12 +235,27 @@ workflows:
     content_tool: "read_pdf"
     content_url_field: "pdf_url"
 
-    # Additional tools
+    # Additional tools available to the lit review agent
     read_tools:
       - "read_pdf"
       - "query_pdf"
     utility_tools:
       - "find_pdf_links"
+
+  # Tools available to the Generate node in tool-calling mode (Mode 3)
+  draft_generation:
+    search_tools:
+      - "arxiv_search"
+      - "nvd_cve_search"
+    read_tools:
+      - "read_pdf"
+
+  # Tools available for novelty validation
+  validation:
+    search_tools:
+      - "arxiv_search"
+    read_tools:
+      - "read_pdf"
 ```
 
 #### Multi-Source Fields
@@ -198,6 +269,7 @@ workflows:
 | `content_url_field` | string | Field containing URL for content tool (optional) |
 | `pdf_discovery_tool` | string | Tool for finding PDF URLs from landing pages (optional) |
 | `pdf_discovery_url_field` | string | Field containing landing page URL (optional) |
+| `content_params` | object | Extra parameters passed to content tool (optional); supports `{research_goal}` placeholder |
 
 **Content retrieval strategies:**
 
@@ -223,6 +295,18 @@ workflows:
      content_url_field: "pdf_url"
    ```
 
+4. **Research-focused content extraction** (with context params):
+   ```yaml
+   - tool: "arxiv_search"
+     content_tool: "analyze_pdf_for_research"
+     content_url_field: "pdf_url"
+     content_params:
+       research_goal: "{research_goal}"   # substituted at runtime
+       focus_areas:
+         - "methodology"
+         - "key findings"
+   ```
+
 ---
 
 ### Source Type and Query Generation
@@ -232,9 +316,10 @@ The `source_type` field determines query generation strategy:
 | Source Type | Query Format | Use Case |
 |-------------|--------------|----------|
 | `"pubmed"` | Boolean (AND/OR/NOT) | PubMed-specific syntax |
-| `"academic"` | Natural language | General academic search |
+| `"academic"` | Natural language | General academic search (Google Scholar) |
 | `"preprint"` | Natural language | arXiv, bioRxiv, etc. |
 | `"knowledge_graph"` | Gene/protein names | INDRA, STRING, etc. |
+| `"vulnerability_database"` | Topic keywords | NVD/CVE databases |
 
 **LLM-based query generation** (when `query_generation_tool: null`):
 - Detects source types from enabled sources
@@ -247,32 +332,58 @@ The `source_type` field determines query generation strategy:
 
 ---
 
+### Enrichments
+
+Post-generation enrichments call a tool once per hypothesis and attach the results to `hypothesis.enrichments`. This is useful for domain-specific data that augments the output (e.g., related CVEs in cybersecurity, or gene interaction data in biomedicine).
+
+```yaml
+enrichments:
+  - tool: "nvd_cve_search"
+    input_field: "text"          # Hypothesis field used as query input
+    output_key: "related_cves"   # Key under hypothesis.enrichments
+    results_path: "results"      # JSONPath into tool response
+    enabled: true
+    max_results: 5
+```
+
+Each entry in `enrichments` produces a key under `hypothesis["enrichments"]`. Multiple enrichment tools can be configured.
+
+---
+
 ## Using These Configurations
 
 ### Method 1: Pass to HypothesisGenerator
 
 ```python
+import asyncio
 from open_coscientist import HypothesisGenerator
 
-generator = HypothesisGenerator(
-    research_goal="Your research question",
-    tools_config="path/to/multi_source.yaml"
-)
+async def main():
+    generator = HypothesisGenerator(
+        model_name="gemini/gemini-2.5-flash",
+        tools_config="path/to/my_config.yaml"
+    )
 
-result = generator.run()
+    async for node_name, state in generator.generate_hypotheses(
+        research_goal="Your research question",
+        stream=True
+    ):
+        print(f"Completed: {node_name}")
+
+asyncio.run(main())
 ```
 
 ### Method 2: Copy to User Config Directory
 
 ```bash
-cp multi_source.yaml ~/.coscientist/tools.yaml
+cp my_config.yaml ~/.coscientist/tools.yaml
 ```
 
 The registry automatically loads from `~/.coscientist/tools.yaml` if present.
 
 ### Method 3: Modify and Merge
 
-Create a custom config that overrides specific tools:
+Create a custom config that extends or overrides specific tools:
 
 ```yaml
 version: "1.0"
@@ -290,7 +401,7 @@ tools:
 
 ## Merge Strategies
 
-Control how user configs interact with built-in `tools.yaml`:
+Control how user configs interact with the built-in `tools.yaml`:
 
 | Strategy | Behavior |
 |----------|----------|
@@ -304,15 +415,13 @@ Set in `settings.merge_strategy`.
 
 ## Limitations and Future Work
 
-### Current Limitations
+1. **Single query set for all sources:** Multi-source configs use the same queries for all sources. If sources are mixed in the same run, some may yield no results for certain source types. Alternatives include running hypothesis generation once per source, or extending the project to support per-source query generation in the same run.
 
-1. **Single query set for all sources:** Multi-source configs use the same queries for all sources. If sources are mixed and ran on the same literature-review/query generation process, some may yield no results for a source. Alternatives include running the hypothesis generation process twice- one per source/mcp server. Or, extending the project to better support per-source query generation in the same run.
-
-.2 MCP caching is assumed to occur on the mcp server side.
+2. **MCP caching:** Caching of MCP tool responses is assumed to occur on the MCP server side.
 
 ## Getting Help
 
-- **Schema validation errors:** Check field names and types against this README
+- **Schema validation errors:** Check field names and types against this document
 - **MCP connection errors:** Verify `url` and `enabled` in server configs
-- **Missing tools:** Check MCP server logs - tool must be registered
+- **Missing tools:** Check MCP server logs — tool must be registered
 - **Empty results:** Check `response_format.field_mapping` matches MCP response structure

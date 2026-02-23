@@ -414,6 +414,10 @@ class EnrichmentConfig:
         max_results: Max results to request from the tool
         results_path: Dot-path to extract from response (e.g., "results" to unwrap a
             response wrapper). Empty string means use the full response as-is.
+        workflow: Which pipeline phase runs this enrichment.
+            "generation" (default) = called by the generation coordinator per hypothesis.
+            "reflection" = called by the reflection node using entity-level lookups;
+            these are skipped by the coordinator's general enrichment loop.
     """
 
     tool: str
@@ -422,6 +426,7 @@ class EnrichmentConfig:
     enabled: bool = True
     max_results: int = 10
     results_path: str = ""
+    workflow: str = "generation"
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "EnrichmentConfig":
@@ -433,6 +438,7 @@ class EnrichmentConfig:
             enabled=data.get("enabled", True),
             max_results=data.get("max_results", 10),
             results_path=data.get("results_path", ""),
+            workflow=data.get("workflow", "generation"),
         )
 
 

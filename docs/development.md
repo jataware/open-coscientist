@@ -17,27 +17,37 @@ open-coscientist/
 │       ├── cache.py            # LLM response caching
 │       ├── mcp_client.py       # MCP server integration
 │       ├── constants.py        # Configuration constants
+│       ├── config/             # YAML-based tool/domain configuration
+│       │   ├── registry.py     # Config loading and merge logic
+│       │   ├── schema.py       # Config schema validation
+│       │   ├── tools.yaml      # Default PubMed config
+│       │   └── examples/       # Domain-specific example configs
 │       ├── nodes/              # Individual node implementations
-│       │   ├── __init__.py
 │       │   ├── supervisor.py
 │       │   ├── literature_review.py
-│       │   ├── generate.py
+│       │   ├── literature_review_helpers.py
+│       │   ├── reflection.py
+│       │   ├── reflection_helpers.py
 │       │   ├── review.py
-│       │   ├── rank.py
+│       │   ├── ranking.py
 │       │   ├── meta_review.py
 │       │   ├── evolve.py
 │       │   ├── proximity.py
-│       │   └── reflection.py
+│       │   └── generation/     # Generate node submodule
+│       │       ├── coordinator.py      # Orchestrates generation strategies
+│       │       ├── debate.py           # Multi-perspective debate generation
+│       │       ├── papers.py           # Literature-informed generation
+│       │       ├── citations.py        # [C*] citation index and resolution
+│       │       └── literature_tools/   # Tool-calling generation (Mode 3)
 │       └── prompts/            # Markdown prompt templates
 │           ├── supervisor.md
 │           ├── generate.md
 │           ├── review.md
 │           └── ...
 ├── examples/
-│   ├── basic_usage.py
-│   └── with_literature_review.py
+│   └── run.py                  # CLI example with Console Reporter
 ├── mcp_server/                 # Reference MCP server implementation
-├── docs/                       # Documentation
+└── docs/                       # Documentation
 ```
 
 ## Node Structure
@@ -162,7 +172,25 @@ There are many other fields. Inspect state as each node completed or view state.
 
 ### Hypothesis Structure
 
-Each hypothesis is a dictionary. See models.py for its shape and properties.
+Each hypothesis is a dictionary. Key fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `text` | string | The technical hypothesis formulation |
+| `explanation` | string | Step-by-step layman explanation |
+| `literature_grounding` | string | Grounding in literature with `[C*]` citation keys |
+| `experiment` | string | Suggested validation design |
+| `citation_map` | dict | Resolves `[C*]` keys to full source metadata (papers and knowledge graph entries) |
+| `enrichments` | dict | Post-generation domain data, keyed by `output_key` from enrichment config |
+| `novelty_validation` | string | Novelty search summary (tool-calling generation only) |
+| `score` | float | Composite review score |
+| `elo_rating` | int | Elo rating from tournament |
+| `reviews` | list | Per-review scores and feedback |
+| `evolution_history` | list | Refinement summaries from Evolve node |
+| `reflection_notes` | string | Reflection node analysis against literature |
+| `generation_method` | string | `"literature"` or `"debate"` |
+
+See `models.py` for the full `Hypothesis` dataclass.
 
 ## LLM Calling
 

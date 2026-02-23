@@ -9,6 +9,7 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
+from .citations import ReferenceIndex, resolve_citation_keys
 from ...constants import (
     DEBATE_MAX_TURNS,
     EXTENDED_MAX_TOKENS,
@@ -17,7 +18,7 @@ from ...constants import (
 )
 from ...llm import call_llm, call_llm_json
 from ...models import Hypothesis
-from ...prompts import get_debate_generation_prompt
+from ...prompts import get_debate_generation_prompt, save_prompt_to_disk
 from ...state import WorkflowState
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ async def _run_single_debate(
     debate_id: Optional[int] = None,
     num_turns: int = DEBATE_MAX_TURNS,
     articles_with_reasoning: Optional[str] = None,
+    reference_index: Optional[ReferenceIndex] = None,
 ) -> Tuple[Hypothesis, str]:
     """
     Generate a single hypothesis using multi-turn debate strategy
@@ -51,10 +53,12 @@ async def _run_single_debate(
         debate_id: id for this debate (used for tracking and identification)
         num_turns: number of debate turns to run (default from constants)
         articles_with_reasoning: optional literature review context for debate
+        reference_index: citation key → source mapping for structured citations
 
     returns:
         Tuple of (single generated Hypothesis object, debate transcript string)
     """
+    ref_idx = reference_index or ReferenceIndex(text="", sources={})
     count = 1  # each debate generates exactly 1 hypothesis
     debate_label = f"debate {debate_id}" if debate_id is not None else "debate"
 
@@ -78,12 +82,22 @@ async def _run_single_debate(
             articles_with_reasoning=articles_with_reasoning,
             articles=state.get("articles"),
             tool_registry=state.get("tool_registry"),
+            reference_list=ref_idx.text,
         )
 
         if is_final:
-            # final turn: get structured JSON output with higher token limit for accumulated transcript
-            # debates generate 1 hypothesis each but with longer context, so scale moderately
-            # increased buffer to handle verbose models and Unicode characters
+            save_prompt_to_disk(
+                run_id=state.get("run_id", "unknown"),
+                prompt_name=f"generate_debate_{debate_id}_final",
+                content=prompt,
+                metadata={
+                    "debate_id": debate_id,
+                    "turn": turn,
+                    "has_literature": articles_with_reasoning is not None,
+                    "reference_keys": list(ref_idx.sources.keys()),
+                    "prompt_length_chars": len(prompt),
+                },
+            )
             scaled_max_tokens = min(EXTENDED_MAX_TOKENS + 4000, 20000)
 
             response = await call_llm_json(
@@ -94,22 +108,18 @@ async def _run_single_debate(
                 json_schema=schema,
             )
 
-            # parse hypothesis from response (should be exactly 1)
             hypotheses_data = response.get("hypotheses", [])
             if not hypotheses_data:
                 raise ValueError(f"{debate_label} failed to generate hypothesis")
 
-            hyp_data = hypotheses_data[0]  # take first hypothesis
+            hyp_data = hypotheses_data[0]
 
             hypothesis_text = hyp_data.get("hypothesis") or hyp_data.get("text", "")
             explanation = hyp_data.get("explanation")
             literature_grounding = hyp_data.get("literature_grounding")
             experiment = hyp_data.get("experiment")
 
-            # match lit review articles to this hypothesis's cited papers
-            papers_used = _match_papers_to_grounding(
-                state.get("articles"), literature_grounding
-            )
+            citation_map = resolve_citation_keys(literature_grounding, ref_idx.sources)
 
             hypothesis = Hypothesis(
                 text=hypothesis_text,
@@ -120,12 +130,11 @@ async def _run_single_debate(
                 elo_rating=INITIAL_ELO_RATING,
                 generation_method="debate",
                 debate_id=debate_id,
-                papers_used=papers_used,
+                citation_map=citation_map,
             )
 
             return hypothesis, transcript
         else:
-            # non-final turn: get conversational response with higher token limit for accumulated transcript
             response_text = await call_llm(
                 prompt=prompt,
                 model_name=state["model_name"],
@@ -133,10 +142,8 @@ async def _run_single_debate(
                 temperature=HIGH_TEMPERATURE,
             )
 
-            # accumulate to transcript
             transcript += f"\n\nTurn {turn}:\n{response_text}"
 
-    # should not reach here, but raise error as fallback
     raise ValueError(f"{debate_label} ended without final turn")
 
 
@@ -144,6 +151,7 @@ async def generate_with_debate(
     state: WorkflowState,
     count: int,
     articles_with_reasoning: Optional[str] = None,
+    reference_index: Optional[ReferenceIndex] = None,
 ) -> Tuple[List[Hypothesis], List[Dict[str, Any]]]:
     """
     Generate hypotheses using parallel debate strategy
@@ -154,6 +162,7 @@ async def generate_with_debate(
         state: current workflow state
         count: number of debates to run (= number of hypotheses to generate)
         articles_with_reasoning: optional literature review context for debates
+        reference_index: citation key → source mapping for structured citations
 
     returns:
         tuple of (debate_hypotheses, debate_transcripts)
@@ -163,15 +172,18 @@ async def generate_with_debate(
 
     logger.info(f"Running {count} parallel debates")
 
-    # run count parallel debates, each generating 1 hypothesis
     debate_tasks = [
-        _run_single_debate(state, debate_id=i, articles_with_reasoning=articles_with_reasoning)
+        _run_single_debate(
+            state,
+            debate_id=i,
+            articles_with_reasoning=articles_with_reasoning,
+            reference_index=reference_index,
+        )
         for i in range(count)
     ]
 
     debate_results = await asyncio.gather(*debate_tasks)
 
-    # unpack results
     debate_hypotheses = [hyp for hyp, _ in debate_results]
     debate_transcripts = [
         {

@@ -31,6 +31,7 @@ async def draft_hypotheses(
     count: int,
     mcp_client: Any,
     tool_registry: Optional["ToolRegistry"] = None,
+    reference_index: Optional[Any] = None,
 ) -> List[Dict[str, str]]:
     """
     Phase 1: draft hypotheses by searching literature sources for metadata.
@@ -110,6 +111,7 @@ async def draft_hypotheses(
     logger.info(f"Draft budget: {max_iterations} iterations for {count} hypotheses")
 
     # build draft prompt with lit review summary as context
+    ref_text = reference_index.text if reference_index else ""
     prompt, schema = get_draft_prompt_with_tools(
         research_goal=state["research_goal"],
         hypotheses_count=count,
@@ -121,6 +123,7 @@ async def draft_hypotheses(
         user_hypotheses=user_hypotheses,
         max_iterations=max_iterations,
         tool_registry=tool_registry,
+        reference_list=ref_text,
     )
 
     # save prompt to disk

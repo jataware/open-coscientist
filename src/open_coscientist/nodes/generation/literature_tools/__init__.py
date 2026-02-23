@@ -8,7 +8,10 @@ Orchestrates both phases to generate hypotheses with dynamic literature access.
 """
 
 import logging
-from typing import List
+from typing import List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..citations import ReferenceIndex
 
 from ....mcp_client import get_mcp_client
 from ....models import Hypothesis
@@ -21,7 +24,11 @@ from .validate import validate_hypotheses
 logger = logging.getLogger(__name__)
 
 
-async def generate_with_tools(state: WorkflowState, count: int) -> List[Hypothesis]:
+async def generate_with_tools(
+    state: WorkflowState,
+    count: int,
+    reference_index: Optional["ReferenceIndex"] = None,
+) -> List[Hypothesis]:
     """
     Generate hypotheses with two-phase tool-based process (draft -> validate).
 
@@ -31,27 +38,21 @@ async def generate_with_tools(state: WorkflowState, count: int) -> List[Hypothes
     Args:
         state: Current workflow state
         count: Number of hypotheses to generate
+        reference_index: Citation key → source mapping for structured citations
 
     Returns:
         List of validated hypotheses with generation_method="literature_tools"
     """
     logger.info(f"Generating {count} hypotheses with two-phase tool-based process")
 
-    # get tool registry from state (may be None for backwards compatibility)
     tool_registry = state.get("tool_registry")
 
-    # get MCP client
     try:
         mcp_client = await get_mcp_client(tool_registry=tool_registry)
     except Exception as e:
         logger.warning(f"Failed to get MCP client: {e}")
         raise
 
-    # note: draft and validate phases use separate tool whitelists
-    # draft = read pre-curated papers, no search
-    # validate = search for novelty checking
-
-    # log article stats
     articles = state.get("articles", [])
     if articles:
         used_count = sum(1 for art in articles if art.used_in_analysis)
@@ -70,21 +71,20 @@ async def generate_with_tools(state: WorkflowState, count: int) -> List[Hypothes
                 "No articles with used_in_analysis=True found in state - agent will search fresh"
             )
 
-    # Phase 1: Draft hypotheses (reads pre-curated papers)
     draft_hyps = await draft_hypotheses(
-        state=state, count=count, mcp_client=mcp_client, tool_registry=tool_registry
+        state=state, count=count, mcp_client=mcp_client, tool_registry=tool_registry,
+        reference_index=reference_index,
     )
 
     logger.info(f"Phase 1 complete: drafted {len(draft_hyps)} hypotheses")
 
-    # Phase 2: Validate and refine drafts (searches for novelty, with tool access)
     hypotheses = await validate_hypotheses(
-        state=state, draft_hypotheses=draft_hyps, mcp_client=mcp_client, tool_registry=tool_registry
+        state=state, draft_hypotheses=draft_hyps, mcp_client=mcp_client,
+        tool_registry=tool_registry, reference_index=reference_index,
     )
 
     logger.info(f"Phase 2 complete: validated {len(hypotheses)} hypotheses")
 
-    # debug logging to verify generation_method
     for i, hyp in enumerate(hypotheses):
         logger.debug(
             f"tool-generated hypothesis {i+1}: generation_method={hyp.generation_method}, text={hyp.text[:80]}..."

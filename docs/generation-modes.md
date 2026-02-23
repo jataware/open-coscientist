@@ -93,7 +93,7 @@ Supervisor → Literature Review → Generate (with tools) → Reflection → Re
 **Use cases:**
 - More/max literature grounding needed
 - Each hypothesis requires specific literature support
-- Research requiring deep citation integration
+- Research requiring deep citation integration with resolved `[C*]` keys
 - Advanced production use cases
 
 **Requirements:**
@@ -129,8 +129,9 @@ The summary of the review is stored in `state["articles_with_reasoning"]` and us
 - Generate node (Mode 2: pre-processed summaries, Mode 3: direct tool access)
 - Reflection node (compares hypotheses to literature findings)
 
-The articles used are stored in `state[articles]`, which will contain all articles that resulted from the search,
- as well as an annotation (property) `used_in_analysis` if the article was used to create the `articles_with_reasoning` review.
+The articles used are stored in `state["articles"]`, which contains all articles from the search, with `used_in_analysis=True` on articles that were analyzed. Any knowledge graph enrichment sources (e.g., INDRA statements) are stored in `state["context_enrichment_sources"]`.
+
+At generation time, a `ReferenceIndex` is built from analyzed articles and enrichment sources, assigning sequential `[C1]`, `[C2]`, ... keys. The LLM uses these keys in `literature_grounding`, and `citation_map` on each hypothesis resolves the keys to full source metadata.
 
 ### Reflection Node
 

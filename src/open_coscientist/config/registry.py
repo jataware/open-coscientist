@@ -338,9 +338,18 @@ class ToolRegistry:
         """Get the domain-specific prompts configuration."""
         return self.config.prompts
 
-    def get_enrichment_configs(self) -> List[EnrichmentConfig]:
-        """Get enabled enrichment configurations."""
-        return [e for e in self.config.enrichments if e.enabled]
+    def get_enrichment_configs(self, workflow: str = "generation") -> List[EnrichmentConfig]:
+        """Get enabled enrichment configurations for a given workflow phase.
+
+        Args:
+            workflow: "generation" (default) returns configs run by the generation
+                      coordinator. "reflection" returns configs for the reflection node.
+                      Passing "all" returns every enabled config regardless of phase.
+        """
+        return [
+            e for e in self.config.enrichments
+            if e.enabled and (workflow == "all" or e.workflow == workflow)
+        ]
 
     def get_server_configs_for_langchain(self) -> Dict[str, Dict[str, str]]:
         """

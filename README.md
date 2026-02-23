@@ -54,19 +54,19 @@ from open_coscientist import HypothesisGenerator
 
 async def main():
     generator = HypothesisGenerator(
-        model_name="gemini/gemini-2.5-flash", # default model if not provided
+        model_name="gemini/gemini-2.5-flash",  # default model if not provided
         max_iterations=1,
         initial_hypotheses_count=5,
         evolution_max_count=3
     )
 
-async for node_name, state in generator.generate_hypotheses(
-    research_goal="Your research question",
-    stream=True
-):
-    print(f"Completed: {node_name}")
-    if node_name == "generate":
-        print(f"Generated {len(state['hypotheses'])} hypotheses")
+    async for node_name, state in generator.generate_hypotheses(
+        research_goal="Your research question",
+        stream=True
+    ):
+        print(f"Completed: {node_name}")
+        if node_name == "generate":
+            print(f"Generated {len(state['hypotheses'])} hypotheses")
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -77,11 +77,14 @@ See [`examples/run.py`](https://github.com/jataware/open-coscientist/blob/main/e
 ## Features
 
 - **Multi-agent workflow**: Supervisor, Generator, Reviewer, Ranker, Tournament Judge, Meta-Reviewer, Evolution, Proximity Deduplication
-- **Literature review integration**: Optional MCP server provides access to real published research
+- **Rich hypothesis output**: Each hypothesis includes `text`, `explanation` (layman summary), `literature_grounding` with structured `[C*]` citations, and `experiment` (suggested validation design)
+- **Literature review integration**: Optional MCP server provides access to real published research; structured citations resolve to full source metadata
+- **Domain-agnostic customization**: YAML-based configuration to bring your own MCP servers, literature sources, and domain-specific prompt guidance — no code changes needed (see [Domain Customization](https://github.com/jataware/open-coscientist/blob/main/docs/domain-customization.md))
 - **Real-time streaming**: Stream results as they're generated
 - **Intelligent caching**: Faster development iteration with LLM response caching
 - **Elo-based tournament**: Pairwise hypothesis comparison with Elo ratings
 - **Iterative refinement**: Evolves top hypotheses while preserving diversity
+- **Post-generation enrichments**: Attach domain-specific data (e.g., related CVEs, knowledge graph statements) to each hypothesis via configurable tool calls
 
 The workflow automatically detects MCP availability and adjusts accordingly.
 Functional reference MCP server included in `mcp_server/` directory.
@@ -92,6 +95,8 @@ Functional reference MCP server included in `mcp_server/` directory.
 - **[MCP Integration](https://github.com/jataware/open-coscientist/blob/main/docs/mcp-integration.md)** - Literature review setup and configuration
 - **[Generation Modes](https://github.com/jataware/open-coscientist/blob/main/docs/generation-modes.md)** - Three generate node modes explained, and parameters to enable them
 - **[Configuration](https://github.com/jataware/open-coscientist/blob/main/docs/configuration.md)** - All parameters, caching, performance tuning
+- **[Domain Customization](https://github.com/jataware/open-coscientist/blob/main/docs/domain-customization.md)** - Adapting to new domains (cybersecurity, bioinformatics, etc.) via YAML config
+- **[Literature Review Tools Configuration](https://github.com/jataware/open-coscientist/blob/main/docs/literature_review_tools_configuration.md)** - YAML schema reference for custom MCP servers and multi-source literature review
 - **[Logging](https://github.com/jataware/open-coscientist/blob/main/docs/logging.md)** - File logging, rotating logs, log levels
 - **[Development](https://github.com/jataware/open-coscientist/blob/main/docs/development.md)** - Contributing, node structure, testing
 
@@ -110,8 +115,11 @@ Functional reference MCP server included in `mcp_server/` directory.
 | **Evolve** | Hypothesis refinement | Refines top-k hypotheses with context awareness to preserve diversity |
 | **Proximity** | Deduplication | Clusters similar hypotheses and removes high-similarity duplicates |
 
-## Literature Review
-Our MCP server reference implementation is meant to provide a template for how to integrate literature review with Open Coscientist. It is by no means extensive and currently only supports PubMed. See [MCP Integration](https://github.com/jataware/open-coscientist/blob/main/docs/mcp-integration.md) for more on how to extend this reference implementation to meet your needs.
+## Literature Review and Domain Customization
+
+The bundled MCP server provides a PubMed reference implementation. The system is domain-agnostic: a YAML configuration file controls which MCP servers, literature sources, and prompt guidance are used — no code changes needed. Example configurations are included for biomedical (INDRA + PubMed), cybersecurity (arXiv + Google Scholar + NVD), and multi-source academic research.
+
+See [MCP Integration](https://github.com/jataware/open-coscientist/blob/main/docs/mcp-integration.md) to set up literature review, and [Domain Customization](https://github.com/jataware/open-coscientist/blob/main/docs/domain-customization.md) to adapt to your research area.
 
 ## Attribution
 

@@ -109,13 +109,27 @@ Open Coscientist uses a typed state dictionary (`WorkflowState`) that flows thro
 3. Updates relevant state fields
 4. Returns state updates to merge
 
-See state.py : class WorkflowState for state fields.
+Key state fields relevant to hypothesis output:
+
+| Field | Set By | Description |
+|-------|--------|-------------|
+| `hypotheses` | Generate, Evolve | List of `Hypothesis` objects; each has `text`, `explanation`, `literature_grounding`, `experiment`, `citation_map`, `enrichments` |
+| `articles` | Literature Review | Retrieved papers with `used_in_analysis` flag |
+| `articles_with_reasoning` | Literature Review | Formatted literature summary used by Generate and Reflection nodes |
+| `context_enrichment_sources` | Literature Review | Structured items from knowledge graph tools (e.g., INDRA statements); merged into citation index alongside papers |
+
+See `state.py` for the full `WorkflowState` type definition.
+
+## Citations
+
+When a literature review runs, each hypothesis receives structured citations. The Generate node builds a `ReferenceIndex` from papers (`used_in_analysis=True`) and any knowledge graph enrichment sources (e.g., INDRA statements), assigning sequential `[C1]`, `[C2]`, ... keys. The LLM uses these keys in `literature_grounding`, and `citation_map` resolves each key to full source metadata (title, URL, authors, year for papers; display label and structured data for knowledge graph entries).
 
 ## Parallel Execution
 
 Several nodes leverage parallel execution for performance:
 
 - **Review node**: Reviews multiple hypotheses concurrently
+- **Reflection node**: Runs reflection analysis for multiple hypotheses in parallel
 - **Ranking node**: Runs pairwise comparisons in parallel
 - **Evolve node**: Refines multiple hypotheses simultaneously
 

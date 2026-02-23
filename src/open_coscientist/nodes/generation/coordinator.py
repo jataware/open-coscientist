@@ -19,6 +19,7 @@ from ...constants import (
 from ...mcp_client import get_mcp_client
 from ...models import Hypothesis
 from ...state import WorkflowState
+from .citations import ReferenceIndex, build_reference_index
 from .debate import generate_with_debate
 from .literature_tools import generate_with_tools
 
@@ -177,7 +178,8 @@ async def _emit_start_progress(state: WorkflowState, counts: GenerationCounts, t
 async def _execute_generation_tasks(
     state: WorkflowState,
     counts: GenerationCounts,
-    articles_with_reasoning: Optional[str]
+    articles_with_reasoning: Optional[str],
+    reference_index: ReferenceIndex,
 ) -> GenerationResults:
     """Execute parallel generation tasks and return results"""
     tools_hypotheses = []
@@ -190,7 +192,7 @@ async def _execute_generation_tasks(
 
     if counts.tools_count > 0:
         logger.info(f"Running tool-based generation for {counts.tools_count} hypotheses")
-        tasks.append(("tools", generate_with_tools(state, counts.tools_count)))
+        tasks.append(("tools", generate_with_tools(state, counts.tools_count, reference_index)))
 
     if counts.debate_with_lit_count > 0:
         logger.info(f"Running debate-with-literature for {counts.debate_with_lit_count} hypotheses")
@@ -201,6 +203,7 @@ async def _execute_generation_tasks(
                     state=state,
                     count=counts.debate_with_lit_count,
                     articles_with_reasoning=articles_with_reasoning,
+                    reference_index=reference_index,
                 ),
             )
         )
@@ -214,6 +217,7 @@ async def _execute_generation_tasks(
                     state=state,
                     count=counts.debate_only_count,
                     articles_with_reasoning=None,  # explicitly no literature
+                    reference_index=ReferenceIndex(text="", sources={}),
                 ),
             )
         )
@@ -407,11 +411,21 @@ async def generate_hypotheses(state: WorkflowState) -> Dict[str, Any]:
     has_literature = _check_literature_availability(articles_with_reasoning, mcp_available)
     counts = _determine_generation_counts(state, total_count, has_literature, enable_tool_calling)
 
+    reference_index = build_reference_index(
+        articles=state.get("articles"),
+        context_enrichment_sources=state.get("context_enrichment_sources"),
+    )
+    if not reference_index.is_empty():
+        logger.info(
+            f"Built reference index: {sum(1 for k in reference_index.sources if k.startswith('P'))} paper(s), "
+            f"{sum(1 for k in reference_index.sources if k.startswith('KG'))} KG source(s)"
+        )
+
     _log_generation_strategy(counts, total_count)
     await _emit_start_progress(state, counts, total_count)
 
     try:
-        results = await _execute_generation_tasks(state, counts, articles_with_reasoning)
+        results = await _execute_generation_tasks(state, counts, articles_with_reasoning, reference_index)
 
         if counts.is_degraded_mode:
             _apply_degraded_mode_fallback(results.debate_only_hypotheses)

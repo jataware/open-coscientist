@@ -2,16 +2,9 @@
 
 The MCP (Model Context Protocol) server integration is **recommended** for best results. While Open Coscientist will work without it, the quality of hypotheses is significantly enhanced when grounded in real published research.
 
-## Initial Reference Literature Tools
-### PubMed / Biomedical (Initial Scope)
+## Reference Implementation
 
-For our initial release, we focus on the biomedical domain and provide integration with PubMed publications. This was made to:
-- Minimize external dependencies (e.g. API keys, paid services)
-- Keep the demo and CLI experience simple
-- Align with early user interest in biomedical hypothesis generation
-- Provide a well-structured, high-quality literature source for evaluation
-
-The core engine is domain-agnostic by design. With appropriate prompt adaptations and MCP integrations, it can be extended to other research domains. PubMed serves as a concrete reference implementation, not a hard limitation.
+The bundled MCP server in `mcp_server/` provides PubMed integration and serves as a starting point. The core engine is domain-agnostic: literature sources, prompt guidance, and post-generation enrichments are controlled by a YAML configuration — no code changes needed. See [Domain Customization](domain-customization.md) for working examples (biomedical, cybersecurity, multi-source academic).
 
 ## With MCP Server
 
@@ -91,17 +84,17 @@ Open Coscientist supports three generation modes with different levels of litera
 **For detailed information on each mode, configuration examples, and when to use each, see [Generation Modes Documentation](generation-modes.md).**
 
 
-## Extending MCP Tools
+## Bringing Your Own MCP Tools
 
-The MCP server can be extended with additional tools:
+Open Coscientist supports any MCP-compatible server via the YAML configuration system — no modifications to Open Coscientist code or prompts are needed. The YAML config handles:
 
-- Custom research databases
-- Domain-specific literature sources
-- Patent databases
-- Preprint servers (arXiv, bioRxiv)
-- Institutional repositories
+- Registering your server URL and transport
+- Defining tools (search, read, utility) with response parsing rules
+- Mapping tool parameters to canonical names used by the workflow
+- Injecting domain-specific prompt instructions per tool
 
-When bringing or using tools from an external MCP server, with different tool names, signatures, or completely new integrations (eg search other sources),
-you will need to modify the prompt template under `prompts/`, and potentially the related node code to ensure support for the tool.
+Supported literature source types: `pubmed`, `academic`, `preprint`, `knowledge_graph`, `vulnerability_database`.
 
-Refer to the MCP specification for implementing custom tools: [Model Context Protocol](https://modelcontextprotocol.io)
+See [Literature Review Tools Configuration](literature_review_tools_configuration.md) for the full YAML schema reference, and [Domain Customization](domain-customization.md) for complete worked examples.
+
+For implementing custom MCP tools, refer to the [Model Context Protocol specification](https://modelcontextprotocol.io).

@@ -29,11 +29,13 @@ class Hypothesis:
     Attributes:
         text: The dense technical hypothesis formulation
         explanation: Step-by-step layman explanation of the hypothesis
-        literature_grounding: Explicit grounding in literature review with citations
+        literature_grounding: Explicit grounding in literature review with [P1]/[KG1]-style citation keys
         experiment: Practical experiment design to test the hypothesis
         novelty_validation: Summary of search queries used to validate novelty and findings (tool-based generation only)
         enrichments: Post-generation enrichment data from configured tools (e.g., related CVEs)
-        papers_used: Structured list of papers actually read during generation [{"title": "...", "url": "..."}]
+        citation_map: Resolves inline citation keys to full source metadata.
+            Paper entries: {"type": "paper", "title": ..., "url": ..., "authors": [...], "year": ...}
+            KG entries:    {"type": "knowledge_graph", "display": ..., "tool_id": ..., "data": {...}}
         score: Overall quality score (0-100)
         elo_rating: Elo rating from tournament selection
         reviews: List of reviews received
@@ -53,7 +55,7 @@ class Hypothesis:
     experiment: Optional[str] = None
     novelty_validation: Optional[str] = None
     enrichments: Dict[str, Any] = field(default_factory=dict)
-    papers_used: List[Dict[str, str]] = field(default_factory=list)
+    citation_map: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     score: float = 0.0
     elo_rating: int = 1200  # Starting Elo rating
     reviews: List[HypothesisReview] = field(default_factory=list)
@@ -87,7 +89,7 @@ class Hypothesis:
             # "literature_review_used": self.literature_review_used,
             "novelty_validation": self.novelty_validation,
             "enrichments": self.enrichments,
-            "papers_used": self.papers_used,
+            "citation_map": self.citation_map,
             "score": self.score,
             "elo_rating": self.elo_rating,
             "reviews": [

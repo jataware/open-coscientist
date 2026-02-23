@@ -94,6 +94,9 @@ def extract_entity_names(text: str, max_entities: int = 3) -> list[str]:
     for raw in standalone:
         if len(result) >= max_entities:
             break
+        # skip mutation notations like G12C, V600E, L858R (single letter + digit)
+        if len(raw) >= 2 and raw[0].isupper() and raw[1].isdigit():
+            continue
         normalized = _normalize_entity(raw)
         upper = normalized.upper()
         if upper in _STOP or upper in seen:
