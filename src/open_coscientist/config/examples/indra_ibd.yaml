@@ -1,0 +1,323 @@
+# Inflammatory Bowel Disease (Crohn's/UC) - INDRA CoGex Configuration
+# Version 1.0
+#
+# Domain-specific configuration for IBD/Crohn's disease hypothesis generation.
+# Audience: molecular biologists, gastroenterology researchers, pharmaceutical
+# scientists working on next-generation IBD therapeutics.
+#
+# Differentiating tools vs. cancer/alzheimers configs:
+#   - run_enrichment_analysis (signed mode): upstream regulator analysis on
+#     biologic responder/non-responder gene expression signatures
+#   - query_causal_subnetwork: find indirect mechanistic paths between
+#     risk genes (IL23R, NOD2) and downstream epithelial barrier disruption
+#   - query_pathways (multi-gene): shared pathway analysis across IBD risk loci
+#
+# Example research goal:
+#   "What upstream transcriptional regulators explain the divergent immune
+#    gene expression signatures between biologic responders and non-responders
+#    in Crohn's disease, and what novel mechanistic targets do they suggest
+#    for next-generation IBD therapy?"
+#
+# Requirements:
+# - MCP server with INDRA CoGex tools on default port (8888)
+# - PubMed still used for literature review (from default config)
+
+version: "1.0"
+
+# Domain-Specific Prompt Customizations
+prompts:
+  domain_context: |
+    ## Domain: Gastroenterology - Inflammatory Bowel Disease Research
+
+    You are a molecular gastroenterology researcher specializing in IBD
+    (Crohn's disease and ulcerative colitis), mucosal immunology, and
+    next-generation biologic therapy development. Your audience includes
+    gastroenterology researchers, pharmaceutical scientists, and
+    translational immunologists.
+
+    Key terminology:
+    - "Hypothesis" means a novel mechanistic explanation for biologic
+      treatment failure, an upstream regulator driving disease activity,
+      or a new therapeutic target in the IL-23/Th17 or barrier integrity axis.
+    - "Experiment" means transcriptomic analysis (bulk or single-cell RNA-seq),
+      patient biopsy studies, organoid models, or mouse colitis models.
+    - Literature sources include PubMed biomedical research and the INDRA
+      mechanistic knowledge graph (curated causal assertions from literature).
+
+    Focus areas: IL-23/Th17 axis, barrier dysfunction (tight junctions, mucus),
+    biologic response prediction, NOD2/autophagy, microbiome-immune crosstalk,
+    innate lymphoid cells (ILC3), upstream transcriptional regulators,
+    JAK-STAT signaling in gut epithelium, anti-TNF resistance mechanisms.
+
+    Key IBD risk genes: IL23R, NOD2, CARD9, ATG16L1, IL10, STAT3, RORC,
+    ITGA4, PTGER4, SLC22A5, LRRK2, IRGM, RNF186.
+
+  generation_guidance: |
+    ## IBD Hypothesis Generation Guidance
+
+    ### Hypothesis Categories
+    Generate hypotheses spanning mechanistically diverse categories:
+    1. **Biologic resistance mechanisms** - why do ~30-40% of patients fail
+       anti-TNF, anti-IL23, or anti-integrin therapy?
+    2. **Upstream transcriptional regulators** - which master regulators drive
+       the pro-inflammatory gene programs in non-responding patients?
+    3. **Epithelial barrier restoration** - how do immune signals translate
+       to barrier dysfunction, and how could this be reversed?
+    4. **Microbiome-immune interface** - how do specific bacterial signals
+       activate or suppress mucosal immune cascades?
+    5. **Combination targeting** - rational multi-target strategies for
+       treatment-refractory IBD
+
+    ### Hypothesis Format
+    Each hypothesis should follow:
+    "We hypothesize that [upstream regulator/mechanism] drives [downstream
+    pathological process] in biologic-refractory Crohn's disease, because
+    [molecular rationale], suggesting [specific targetable intervention]."
+
+    ### Tool Usage Guidance for IBD Research
+
+    **run_enrichment_analysis (signed mode) — key differentiator:**
+    Use this to identify upstream causal regulators from gene expression data.
+    Signed analysis takes genes up-regulated in non-responders (positive list)
+    vs. down-regulated (negative list) and returns the upstream regulators
+    that best explain the divergent signatures.
+
+    Example — biologic non-responder upstream regulator analysis:
+    ```
+    run_enrichment_analysis(
+        gene_list=["11892", "5962", "5992", "11364", "10637", "6098"],
+        # TNF, IL6, IL1B, STAT3, CXCL10, IRF1 — up in non-responders
+        analysis_type="signed",
+        negative_genes=["5726", "1364", "1365", "4582"],
+        # CDH1, CLDN1, CLDN3, MUC2 — down in non-responders (barrier genes)
+        minimum_belief=0.5,
+    )
+    ```
+
+    **run_enrichment_analysis (discrete mode):**
+    Identify enriched pathways and GO terms across a set of IBD risk genes.
+    ```
+    run_enrichment_analysis(
+        gene_list=["7127", "19100", "16512", "21498", "5962"],
+        # NOD2, IL23R, CARD9, ATG16L1, IL10
+        analysis_type="discrete",
+        minimum_evidence_count=2,
+    )
+    ```
+
+    **query_causal_subnetwork — find indirect mechanistic paths:**
+    Use to discover intermediate nodes between risk genes and downstream
+    phenotypes. Requires NAMESPACE:id format.
+    ```
+    query_causal_subnetwork(
+        node_ids=["HGNC:19100", "HGNC:5727"],
+        # IL23R → ? → CDH1 (E-cadherin, barrier integrity)
+        find_mediators=True,
+    )
+    query_causal_subnetwork(
+        node_ids=["HGNC:7127", "HGNC:11364"],
+        # NOD2 → ? → STAT3 (downstream inflammatory signaling)
+        find_mediators=True,
+    )
+    ```
+
+    **query_pathways (multi-gene — shared pathway discovery):**
+    Find pathways shared across multiple IBD risk genes simultaneously.
+    ```
+    query_pathways(
+        gene_ids=["HGNC:7127", "HGNC:19100", "HGNC:16512"],
+        # NOD2, IL23R, CARD9 shared pathways
+    )
+    ```
+
+  review_guidance: |
+    ## IBD Review Criteria
+
+    Prioritize:
+    1. **Mechanistic specificity** - targets the IL-23/Th17 axis, barrier
+       integrity, or NOD2/autophagy with molecular precision?
+    2. **Biologic resistance framing** - does the hypothesis explain why
+       existing biologics fail in a defined patient subset?
+    3. **Tissue accessibility** - can the target be reached locally (gut
+       mucosa) or systemically, and what is the gut-specificity profile?
+    4. **Upstream vs. downstream** - upstream regulators are more novel and
+       potentially more tractable than known downstream effectors (TNF, IL-6)
+    5. **Translational feasibility** - can the mechanism be validated in
+       patient biopsies, organoids, or established mouse models (DSS, IL-10 KO)?
+
+  reflection_guidance: |
+    ## Knowledge Graph Verification for IBD
+
+    When INDRA knowledge graph evidence is provided below, use it to:
+    - Verify whether the proposed upstream regulator→downstream effector
+      connections are supported by curated literature (known causal chains)
+    - Check if the mechanistic link between the named risk gene and the
+      proposed downstream pathway actually exists in the graph
+    - Identify whether the target is already well-validated in IBD
+      ("already explained") or represents a genuinely novel connection
+      ("missing piece")
+    - Note if any proposed interactions are contradicted by curated evidence
+    Be concise. Do not repeat the INDRA evidence verbatim.
+
+  evolution_guidance: |
+    ## IBD Evolution Priorities
+
+    When refining IBD hypotheses:
+    1. **Specify the patient subtype** - Crohn's vs. UC, anti-TNF-naive vs.
+       anti-TNF-experienced, stricturing vs. penetrating phenotype
+    2. **Name the upstream regulator precisely** - move from pathway-level
+       to the specific transcription factor or kinase
+    3. **Connect to biologic resistance** - how does the mechanism explain
+       why current biologics fail in this patient group?
+    4. **Propose the biomarker** - what measurable signal (serum, biopsy
+       transcriptome, microbiome composition) would identify responders?
+
+# Tool Definitions
+# INDRA tools extend the default PubMed tools (same MCP server)
+tools:
+  search_tools:
+    indra_statements:
+      server: "default_pubmed"
+      mcp_tool_name: "query_mechanistic_statements"
+      display_name: "INDRA Mechanistic Statements"
+      description: "Query curated causal assertions from INDRA knowledge graph (e.g., IL23R activates STAT3)"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_mechanistic_statements` to find known IBD-relevant causal relationships.
+        - Plain gene names: agent="IL23R", agent="NOD2", agent="STAT3"
+        - Relation types: Activation, Inhibition, Phosphorylation, IncreaseAmount
+        - By MeSH disease: mesh_term="MESH:D003424" (Crohn disease),
+          mesh_term="MESH:D003093" (colitis, ulcerative),
+          mesh_term="MESH:D015212" (inflammatory bowel diseases)
+      parameter_mapping:
+        entity_name: "agent"
+
+    indra_gene_disease:
+      server: "default_pubmed"
+      mcp_tool_name: "query_gene_disease_network"
+      display_name: "Gene-Disease Network"
+      description: "Find genes associated with IBD/Crohn's or diseases for a given IBD risk gene"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_gene_disease_network` to explore IBD gene-disease associations.
+        - Crohn's disease: identifier="MESH:D003424" or "DOID:8778", entity_type="disease"
+        - IBD: identifier="MESH:D015212", entity_type="disease"
+        - Ulcerative colitis: identifier="MESH:D003093", entity_type="disease"
+        - Risk genes: "HGNC:7127" (NOD2), "HGNC:19100" (IL23R), "HGNC:16512" (CARD9)
+        - Set include_variants=true to include GWAS variant associations
+      parameter_mapping:
+        entity_name: "identifier"
+
+    indra_drug_info:
+      server: "default_pubmed"
+      mcp_tool_name: "query_drug_info"
+      display_name: "Drug Target/Indication Info"
+      description: "Query IBD biologic targets, drug indications, and adverse effects"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_drug_info` to explore IBD biologic and small molecule interactions.
+        - Drugs for a target (anti-TNF targets): identifier="HGNC:11892" (TNF), query_type="drugs_for_target"
+        - Drugs for IL-23 pathway: identifier="HGNC:19100" (IL23R), query_type="drugs_for_target"
+        - JAK inhibitor targets: identifier="HGNC:11972" (JAK1), query_type="drugs_for_target"
+        - Drug indications (tofacitinib): query_type="indications"
+        - Side effects (anti-TNF agents): query_type="side_effects"
+
+    indra_enrichment:
+      server: "default_pubmed"
+      mcp_tool_name: "run_enrichment_analysis"
+      display_name: "Gene Set Enrichment (Signed/Discrete)"
+      description: "Identify upstream transcriptional regulators and enriched pathways from IBD gene signatures"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `run_enrichment_analysis` to find upstream regulators driving IBD gene expression patterns.
+        This is the PRIMARY differentiating tool for this domain — use it early and often.
+
+        SIGNED analysis (biologic non-responder vs. responder):
+        - gene_list: HGNC numeric IDs of genes UP in non-responders
+          (e.g., ["11892","5962","5992","11364","10637"] = TNF,IL6,IL1B,STAT3,CXCL10)
+        - negative_genes: HGNC numeric IDs of genes DOWN in non-responders
+          (barrier genes: ["5727","1364","1365","4582"] = CDH1,CLDN1,CLDN3,MUC2)
+        - analysis_type="signed", minimum_belief=0.5
+
+        DISCRETE analysis (enrichment across IBD risk loci):
+        - gene_list: HGNC IDs of IBD GWAS risk genes
+          (e.g., ["7127","19100","16512","21498"] = NOD2,IL23R,CARD9,ATG16L1)
+        - analysis_type="discrete"
+
+    indra_subnetwork:
+      server: "default_pubmed"
+      mcp_tool_name: "query_causal_subnetwork"
+      display_name: "Causal Subnetwork"
+      description: "Find indirect mechanistic paths between IBD risk genes and downstream phenotypes"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_causal_subnetwork` to discover mediators between IBD risk genes and downstream effects.
+        This reveals the indirect molecular steps the LLM often misses.
+        - IL23R → barrier breakdown: node_ids=["HGNC:19100", "HGNC:5727"] (IL23R, CDH1)
+        - NOD2 → STAT3 signaling: node_ids=["HGNC:7127", "HGNC:11364"] (NOD2, STAT3)
+        - TNF → tight junction disruption: node_ids=["HGNC:11892", "HGNC:1364"] (TNF, CLDN1)
+        - Always set find_mediators=True to get A → X → B paths
+
+    indra_pathways:
+      server: "default_pubmed"
+      mcp_tool_name: "query_pathways"
+      display_name: "Biological Pathways"
+      description: "Query shared pathways across IBD risk genes"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_pathways` to find shared pathway context for IBD risk genes.
+        - Single risk gene: gene_ids=["HGNC:7127"] (NOD2 pathways)
+        - Shared pathways across NOD2 + CARD9 + IL23R:
+          gene_ids=["HGNC:7127", "HGNC:16512", "HGNC:19100"]
+        - Shared pathways in the autophagy cluster (NOD2, ATG16L1, IRGM):
+          gene_ids=["HGNC:7127", "HGNC:21498"]
+
+    indra_codependents:
+      server: "default_pubmed"
+      mcp_tool_name: "query_gene_codependents"
+      display_name: "Gene Codependency"
+      description: "Find functionally linked partners for IBD risk genes from DepMap data"
+      category: "search"
+      enabled: true
+
+    indra_clinical_trials:
+      server: "default_pubmed"
+      mcp_tool_name: "query_clinical_trials"
+      display_name: "Clinical Trials"
+      description: "Find clinical trials for IBD indications or specific biologics"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_clinical_trials` to survey the IBD trial landscape.
+        - Crohn's disease trials: identifier="MESH:D003424", entity_type="disease"
+        - UC trials: identifier="MESH:D003093", entity_type="disease"
+        - IBD trials: identifier="MESH:D015212", entity_type="disease"
+
+# Workflow Configurations
+workflows:
+  literature_review:
+    context_enrichment_tools:
+      - "indra_statements"
+      - "indra_gene_disease"
+
+  reflection:
+    search_tools:
+      - "indra_statements"
+
+# Reflection-Time Enrichments
+enrichments:
+  - tool: "indra_statements"
+    input_field: "text"
+    output_key: "indra_evidence"
+    enabled: true
+    workflow: "reflection"
+
+# Global Settings
+settings:
+  merge_strategy: "extend"

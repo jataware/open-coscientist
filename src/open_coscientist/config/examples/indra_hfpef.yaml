@@ -1,0 +1,372 @@
+# Heart Failure with Preserved Ejection Fraction (HFpEF) - INDRA CoGex Configuration
+# Version 1.0
+#
+# Domain-specific configuration for HFpEF hypothesis generation.
+# Audience: cardiologists, heart failure specialists, translational
+# cardiometabolic researchers, clinical trialists.
+#
+# Differentiating tools vs. cancer/alzheimers configs:
+#   - query_causal_subnetwork: find indirect mechanistic paths connecting
+#     cardiometabolic risk factors (obesity, T2D, hypertension) to adverse
+#     cardiac remodeling — the central unanswered question in HFpEF
+#   - query_clinical_trials: explicitly survey the failed HFpEF trial landscape
+#     to motivate novel mechanistic approaches
+#   - query_pathways (multi-gene): shared pathway analysis across HFpEF-
+#     associated genes to identify convergence points for intervention
+#   - query_drug_info (indications + side_effects): repurposing angle using
+#     cardiometabolic drugs already approved for diabetes, obesity, hypertension
+#
+# Example research goal:
+#   "What shared molecular mediators connect cardiometabolic risk factors
+#    (obesity, hypertension, type 2 diabetes) to adverse cardiac remodeling
+#    in heart failure with preserved ejection fraction (HFpEF), and which
+#    could serve as targets for novel pharmacological intervention in this
+#    patient population with no approved disease-modifying therapies?"
+#
+# Requirements:
+# - MCP server with INDRA CoGex tools on default port (8888)
+# - PubMed still used for literature review (from default config)
+
+version: "1.0"
+
+# Domain-Specific Prompt Customizations
+prompts:
+  domain_context: |
+    ## Domain: Cardiology - Heart Failure with Preserved Ejection Fraction (HFpEF)
+
+    You are a translational cardiologist and cardiovascular researcher
+    specializing in heart failure, cardiac remodeling, and cardiometabolic
+    disease. Your audience includes cardiologists, heart failure specialists,
+    clinical trialists, and pharmaceutical researchers targeting HFpEF.
+
+    Key terminology:
+    - "Hypothesis" means a novel mechanistic target, drug repurposing candidate,
+      or biomarker-guided therapeutic strategy for slowing or reversing adverse
+      cardiac remodeling in HFpEF.
+    - "Experiment" means preclinical validation (animal models of metabolic HFpEF:
+      HFD+L-NAME mouse, ZSF1 rat), echocardiographic endpoints (E/e', LVEF,
+      GLS), or biomarker analysis in patient cohorts (BNP, cardiac MRI fibrosis).
+    - Literature sources include PubMed biomedical research and the INDRA
+      mechanistic knowledge graph (curated causal assertions from literature).
+
+    Background on HFpEF:
+    HFpEF accounts for ~50% of all heart failure cases and has NO approved
+    disease-modifying therapies. Patients present with preserved systolic
+    function (LVEF ≥50%) but impaired diastolic filling, exercise intolerance,
+    and high comorbidity burden (obesity, hypertension, atrial fibrillation,
+    T2D, CKD). The mechanistic basis for how cardiometabolic risk factors
+    cause cardiac structural and functional changes is poorly understood.
+
+    Focus areas: cardiac fibrosis (TGF-β/SMAD pathway), RAAS dysregulation,
+    epicardial adipose tissue signaling, coronary microvascular dysfunction,
+    NLRP3 inflammasome activation, mitochondrial dysfunction and metabolic
+    inflexibility, SGLT2 inhibitor mechanisms, natriuretic peptide signaling,
+    titin isoform switching (N2B → N2BA), epigenetic remodeling.
+
+    Key HFpEF-associated genes: TGFB1, AGT, ACE, NPPA, NPPB, IL6, TNF,
+    PPARG, AMPK (PRKAA2), RASAL1, NOX4, FN1, COL1A1, CTGF/CCN2, MMP2, MMP9.
+
+  generation_guidance: |
+    ## HFpEF Hypothesis Generation Guidance
+
+    ### Hypothesis Categories
+    Generate hypotheses spanning diverse clinically translatable mechanisms:
+    1. **Cardiometabolic mediators** - indirect molecular links from obesity/
+       T2D/hypertension to cardiac fibrosis and diastolic dysfunction
+    2. **Drug repurposing** - approved cardiometabolic drugs (SGLT2i, GLP-1 RA,
+       ARBs, statins, metformin) with mechanistic basis for HFpEF benefit
+    3. **Inflammation-fibrosis axis** - how systemic inflammation drives
+       myocardial fibrosis and stiffness in HFpEF
+    4. **Mitochondrial metabolic targets** - cardiac energy substrate
+       flexibility, mitochondrial ROS as a causal driver
+    5. **Biomarker-stratified therapy** - which molecular subtype of HFpEF
+       (inflammatory, metabolic, fibrotic) benefits from which intervention?
+
+    ### Hypothesis Format
+    Each hypothesis should follow:
+    "We hypothesize that [molecular mediator/pathway] drives [specific cardiac
+    structural/functional change] in [HFpEF patient subtype], because
+    [mechanistic rationale], and could be targeted by [specific drug or
+    intervention] which is supported by [existing mechanistic or clinical data]."
+
+    ### Tool Usage Guidance for HFpEF Research
+
+    **query_causal_subnetwork — the central tool for HFpEF:**
+    This is the most powerful tool for HFpEF because the core question IS
+    the indirect mechanism: "how does obesity/T2D/hypertension CAUSE cardiac
+    pathology?" Use it to find the intermediate molecular nodes (mediators)
+    between cardiometabolic drivers and cardiac endpoints.
+
+    ```
+    # How does metabolic stress reach cardiac fibrosis?
+    query_causal_subnetwork(
+        node_ids=["HGNC:8651", "HGNC:11766"],
+        # PPARG (metabolic sensor) → ? → TGFB1 (fibrosis driver)
+        find_mediators=True,
+    )
+    # How does RAAS activation lead to diastolic dysfunction?
+    query_causal_subnetwork(
+        node_ids=["HGNC:333", "HGNC:5154"],
+        # AGT (angiotensinogen) → ? → IL6 (inflammatory amplifier)
+        find_mediators=True,
+    )
+    # How do natriuretic peptides connect to fibrotic remodeling?
+    query_causal_subnetwork(
+        node_ids=["HGNC:7940", "HGNC:2197"],
+        # NPPB (BNP) → ? → COL1A1 (collagen deposition)
+        find_mediators=True,
+    )
+    ```
+
+    **query_clinical_trials — map the failed trial landscape:**
+    HFpEF has a long history of negative trials from strategies that worked
+    in HFrEF. Knowing what has been tried is essential context for generating
+    novel hypotheses. Use this early to avoid re-proposing failed strategies.
+
+    ```
+    query_clinical_trials(
+        identifier="MESH:D006333",   # heart failure
+        entity_type="disease",
+    )
+    # Also check specific drugs under investigation
+    query_clinical_trials(
+        identifier="CHEBI:CHEBI:167579",  # empagliflozin (SGLT2 inhibitor)
+        entity_type="drug",
+    )
+    ```
+
+    **query_pathways (multi-gene — convergence point discovery):**
+    Find shared pathways across multiple HFpEF-associated genes to identify
+    convergence nodes amenable to a single therapeutic intervention.
+
+    ```
+    # Fibrosis gene cluster shared pathways
+    query_pathways(
+        gene_ids=["HGNC:11766", "HGNC:2197", "HGNC:7066"],
+        # TGFB1, COL1A1, MMP2
+    )
+    # Metabolic-inflammatory cluster
+    query_pathways(
+        gene_ids=["HGNC:8651", "HGNC:5154", "HGNC:11892"],
+        # PPARG, IL6, TNF
+    )
+    ```
+
+    **query_drug_info — repurposing cardiometabolic drugs:**
+    HFpEF patients often have T2D, obesity, and hypertension — use drugs
+    approved for those conditions as repurposing candidates.
+
+    ```
+    # SGLT2 inhibitor targets and mechanisms
+    query_drug_info(
+        identifier="CHEBI:CHEBI:167579",  # empagliflozin
+        query_type="targets",
+    )
+    # GLP-1 receptor agonist cardiac mechanisms
+    query_drug_info(
+        identifier="HGNC:4345",  # GLP1R
+        query_type="drugs_for_target",
+    )
+    # ARB indications beyond hypertension
+    query_drug_info(
+        identifier="CHEBI:CHEBI:149601",  # losartan
+        query_type="indications",
+    )
+    # Spironolactone side effects (failed TOPCAT trial context)
+    query_drug_info(
+        identifier="CHEBI:CHEBI:9049",  # spironolactone
+        query_type="side_effects",
+    )
+    ```
+
+  review_guidance: |
+    ## HFpEF Review Criteria
+
+    Prioritize:
+    1. **Mechanistic plausibility** - is the proposed link from cardiometabolic
+       risk factor to cardiac endpoint supported by known biology?
+    2. **Clinical translatability** - can this be tested in a clinical trial with
+       measurable endpoints (diastolic function, exercise capacity, BNP, MRI)?
+    3. **Drug availability** - is there an existing approved drug or advanced
+       clinical candidate that could test this mechanism?
+    4. **Novelty vs. failed strategies** - avoids re-proposing neurohormonal
+       blockade (ACE-I, ARB, beta-blockers), which have failed in HFpEF RCTs
+    5. **Patient subtype specificity** - which HFpEF phenogroup (obese-inflammatory,
+       RAAS-driven, atrial fibrillation-associated) would benefit most?
+
+  reflection_guidance: |
+    ## Knowledge Graph Verification for HFpEF
+
+    When INDRA knowledge graph evidence is provided below, use it to:
+    - Verify whether the proposed cardiometabolic mediator → cardiac endpoint
+      connection is supported by curated causal evidence in the graph
+    - Check if the proposed drug mechanism (e.g., SGLT2i cardioprotection)
+      has known direct or indirect molecular support in the literature
+    - Identify if the pathway is already well-characterized in heart failure
+      ("already explained") or represents a genuinely novel mechanistic
+      connection ("missing piece")
+    - Note contradictions — e.g., if a proposed activating relationship
+      is contradicted by curated inhibition evidence
+    Be concise. Do not repeat the INDRA evidence verbatim.
+
+  evolution_guidance: |
+    ## HFpEF Evolution Priorities
+
+    When refining HFpEF hypotheses:
+    1. **Name the specific mediator** - move from "inflammatory signaling"
+       to the specific cytokine or kinase (e.g., IL-18 via NLRP3, NOX4-derived
+       ROS, TGF-β1 via SMAD2/3)
+    2. **Specify the HFpEF phenogroup** - obese/metabolic, hypertensive/RAAS,
+       atrial fibrillation, or CKD-associated; each has a distinct mechanism
+    3. **Connect to failed trials** - explain why this mechanism was missed by
+       previous negative trials (spironolactone TOPCAT, irbesartan I-PRESERVE)
+    4. **Propose the biomarker endpoint** - what measurable signal (cardiac MRI
+       extracellular volume, BNP, GLS, exercise VO2max) would confirm target engagement?
+
+# Tool Definitions
+# INDRA tools extend the default PubMed tools (same MCP server)
+tools:
+  search_tools:
+    indra_statements:
+      server: "default_pubmed"
+      mcp_tool_name: "query_mechanistic_statements"
+      display_name: "INDRA Mechanistic Statements"
+      description: "Query curated causal assertions from INDRA knowledge graph (e.g., TGFB1 activates COL1A1)"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_mechanistic_statements` to find known HFpEF-relevant causal relationships.
+        - Plain gene names: agent="TGFB1", agent="NPPA", agent="AGT", agent="NOX4"
+        - Relation types: Activation, Inhibition, Phosphorylation, IncreaseAmount
+        - By MeSH disease: mesh_term="MESH:D006333" (heart failure),
+          mesh_term="MESH:D009765" (obesity), mesh_term="MESH:D003924" (diabetes, type 2)
+          mesh_term="MESH:D005355" (fibrosis)
+      parameter_mapping:
+        entity_name: "agent"
+
+    indra_gene_disease:
+      server: "default_pubmed"
+      mcp_tool_name: "query_gene_disease_network"
+      display_name: "Gene-Disease Network"
+      description: "Find genes associated with heart failure or cardiometabolic diseases"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_gene_disease_network` to explore HFpEF gene-disease associations.
+        - Heart failure: identifier="MESH:D006333" or "DOID:6000", entity_type="disease"
+        - Cardiac fibrosis: identifier="MESH:D005355", entity_type="disease"
+        - Type 2 diabetes: identifier="MESH:D003924", entity_type="disease"
+        - Obesity: identifier="MESH:D009765", entity_type="disease"
+        - Key genes: "HGNC:11766" (TGFB1), "HGNC:7940" (NPPB/BNP), "HGNC:333" (AGT)
+        - Set include_variants=true for cardiovascular GWAS variant associations
+      parameter_mapping:
+        entity_name: "identifier"
+
+    indra_subnetwork:
+      server: "default_pubmed"
+      mcp_tool_name: "query_causal_subnetwork"
+      display_name: "Causal Subnetwork"
+      description: "Find indirect mechanistic paths between cardiometabolic risk factors and cardiac endpoints — the defining tool for HFpEF research"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_causal_subnetwork` to find mediators between cardiometabolic drivers
+        and cardiac remodeling endpoints. This is the PRIMARY tool for HFpEF research
+        because the central hypothesis IS the indirect mechanism.
+
+        Key HFpEF pairings to explore:
+        - PPARG → TGFB1: node_ids=["HGNC:9236", "HGNC:11766"] (metabolic → fibrosis)
+        - AGT → IL6: node_ids=["HGNC:333", "HGNC:5154"] (RAAS → inflammation)
+        - NPPB → COL1A1: node_ids=["HGNC:7940", "HGNC:2197"] (BNP → fibrosis)
+        - TNF → NOX4: node_ids=["HGNC:11892", "HGNC:7891"] (inflammation → oxidative stress)
+        Always set find_mediators=True to expose the intermediate nodes.
+
+    indra_clinical_trials:
+      server: "default_pubmed"
+      mcp_tool_name: "query_clinical_trials"
+      display_name: "Clinical Trials"
+      description: "Survey the HFpEF clinical trial landscape — including failed trials — to focus hypotheses on unmet mechanistic gaps"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_clinical_trials` to map the HFpEF trial landscape before generating hypotheses.
+        Use this early — knowing what has been tried (and failed) prevents re-proposing known
+        negative strategies and focuses the hypothesis on genuine mechanistic gaps.
+        - Heart failure trials: identifier="MESH:D006333", entity_type="disease"
+        - SGLT2 inhibitor trials: identifier="CHEBI:CHEBI:167579" (empagliflozin), entity_type="drug"
+        - Spironolactone trials (TOPCAT): identifier="CHEBI:CHEBI:9049", entity_type="drug"
+
+    indra_drug_info:
+      server: "default_pubmed"
+      mcp_tool_name: "query_drug_info"
+      display_name: "Drug Target/Indication Info"
+      description: "Repurposing analysis for cardiometabolic drugs in HFpEF"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_drug_info` to evaluate repurposing potential of cardiometabolic drugs.
+        - SGLT2 inhibitor targets: identifier="CHEBI:CHEBI:167579" (empagliflozin), query_type="targets"
+        - GLP-1 RA drugs: identifier="HGNC:4345" (GLP1R), query_type="drugs_for_target"
+        - ARB indications: identifier="CHEBI:CHEBI:149601" (losartan), query_type="indications"
+        - Metformin targets: identifier="CHEBI:CHEBI:6801", query_type="targets"
+        - Side effects of approved HF drugs: query_type="side_effects"
+
+    indra_pathways:
+      server: "default_pubmed"
+      mcp_tool_name: "query_pathways"
+      display_name: "Biological Pathways"
+      description: "Shared pathway analysis across HFpEF-associated genes"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `query_pathways` to find shared pathways across HFpEF gene clusters.
+        - Fibrosis cluster: gene_ids=["HGNC:11766", "HGNC:2197", "HGNC:7066"]
+          (TGFB1, COL1A1, MMP2)
+        - Metabolic-inflammatory cluster: gene_ids=["HGNC:9236", "HGNC:5154", "HGNC:11892"]
+          (PPARG, IL6, TNF)
+        - RAAS cluster: gene_ids=["HGNC:333", "HGNC:2707"]
+          (AGT, ACE)
+
+    indra_codependents:
+      server: "default_pubmed"
+      mcp_tool_name: "query_gene_codependents"
+      display_name: "Gene Codependency"
+      description: "Find functionally co-essential partners for HFpEF-associated genes"
+      category: "search"
+      enabled: true
+
+    indra_enrichment:
+      server: "default_pubmed"
+      mcp_tool_name: "run_enrichment_analysis"
+      display_name: "Gene Set Enrichment"
+      description: "Enrichment analysis on HFpEF gene sets for upstream regulator discovery"
+      category: "search"
+      enabled: true
+      prompt_snippet: |
+        Use `run_enrichment_analysis` to find enriched pathways and upstream regulators.
+        - Discrete analysis on HFpEF fibrosis gene set:
+          gene_list=["11766","2197","7066","9946"] (TGFB1,COL1A1,MMP2,CTGF)
+          analysis_type="discrete"
+
+# Workflow Configurations
+workflows:
+  literature_review:
+    context_enrichment_tools:
+      - "indra_statements"
+      - "indra_gene_disease"
+
+  reflection:
+    search_tools:
+      - "indra_statements"
+
+# Reflection-Time Enrichments
+enrichments:
+  - tool: "indra_statements"
+    input_field: "text"
+    output_key: "indra_evidence"
+    enabled: true
+    workflow: "reflection"
+
+# Global Settings
+settings:
+  merge_strategy: "extend"
