@@ -16,6 +16,7 @@ from ....constants import (
     GENERATE_LIT_TOOL_MAX_PAPERS,
     HIGH_TEMPERATURE,
     INITIAL_ELO_RATING,
+    VALIDATION_SYNTHESIS_BATCH_SIZE,
     get_validate_max_iterations,
 )
 from ....llm import call_llm_json, call_llm_with_tools, attempt_json_repair
@@ -282,11 +283,11 @@ async def validate_hypotheses(
 
     # stage 2: synthesis - decide approve/refine/pivot for all hypotheses
     # synthesis agent has tool access for searching additional papers when pivoting
-    BATCH_SIZE = 6  # process 6 hypotheses per synthesis call
     total_hypotheses = len(hypotheses_with_analyses)
 
     logger.info(
-        f"Running validation synthesis for {total_hypotheses} hypotheses in batches of {BATCH_SIZE}"
+        f"Running validation synthesis for {total_hypotheses} hypotheses "
+        f"in batches of {VALIDATION_SYNTHESIS_BATCH_SIZE}"
     )
 
     # set up tool provider for synthesis phase
@@ -321,26 +322,43 @@ async def validate_hypotheses(
     logger.info(f"Validation synthesis budget: {max_iterations} iterations")
 
     # batch hypotheses
-    batches = []
-    for i in range(0, total_hypotheses, BATCH_SIZE):
-        batch = hypotheses_with_analyses[i : i + BATCH_SIZE]
-        batches.append(batch)
+    batches = [
+        hypotheses_with_analyses[i : i + VALIDATION_SYNTHESIS_BATCH_SIZE]
+        for i in range(0, total_hypotheses, VALIDATION_SYNTHESIS_BATCH_SIZE)
+    ]
+    logger.info(
+        f"Split into {len(batches)} batches of up to {VALIDATION_SYNTHESIS_BATCH_SIZE} hypotheses"
+    )
 
-    logger.info(f"Split into {len(batches)} batches")
+    # -------------------------------------------------------------------------
+    # helpers
+    # -------------------------------------------------------------------------
 
-    # process each batch with tool access
-    async def process_synthesis_batch_with_tools(
-        batch: List[Dict[str, Any]], batch_num: int
+    def _extract_response_json(raw: str) -> str:
+        """Strip markdown code fences and whitespace from an LLM response."""
+        text = raw.strip()
+        lower = text.lower()
+        if "```json" in lower:
+            start = lower.find("```json") + 7
+            end = text.find("```", start)
+            text = text[start:] if end == -1 else text[start:end]
+        elif "```" in text:
+            start = text.find("```") + 3
+            end = text.find("```", start)
+            text = text[start:] if end == -1 else text[start:end]
+        return text.strip().strip("\n").strip()
+
+    async def _call_synthesis(
+        batch: List[Dict[str, Any]],
+        batch_label: str,
+        already_validated_texts: Optional[List[str]],
     ) -> List[Dict[str, Any]]:
-        """Process a single batch of hypotheses through synthesis with tool access"""
+        """Run one synthesis call and return the parsed hypotheses list."""
         batch_size = len(batch)
-        logger.info(
-            f"Processing synthesis batch {batch_num}/{len(batches)} ({batch_size} hypotheses)"
-        )
+        logger.info(f"Processing synthesis batch {batch_label} ({batch_size} hypotheses)")
 
-        # get prompt with tool instructions
         ref_text = reference_index.text if reference_index else ""
-        synthesis_prompt, schema = get_validation_synthesis_prompt_with_tools(
+        synthesis_prompt, _schema = get_validation_synthesis_prompt_with_tools(
             research_goal=research_goal,
             hypotheses_with_analyses=batch,
             articles=state.get("articles"),
@@ -348,110 +366,118 @@ async def validate_hypotheses(
             max_iterations=max_iterations,
             tool_registry=tool_registry,
             reference_list=ref_text,
+            already_validated_texts=already_validated_texts,
         )
 
-        # save prompt to disk for debugging
         from ....prompts import save_prompt_to_disk
         save_prompt_to_disk(
             run_id=state.get("run_id", "unknown"),
-            prompt_name=f"validation_synthesis_batch_{batch_num}",
+            prompt_name=f"validation_synthesis_batch_{batch_label}",
             content=synthesis_prompt,
             metadata={
-                "batch_num": batch_num,
+                "batch_label": batch_label,
                 "batch_size": batch_size,
                 "max_iterations": max_iterations,
+                "retry_context_count": len(already_validated_texts) if already_validated_texts else 0,
             },
         )
 
-        # scale token budget based on batch size
         synthesis_max_tokens = min(EXTENDED_MAX_TOKENS + (batch_size * 2500), 20000)
         logger.debug(
-            f"Batch {batch_num} token budget: {synthesis_max_tokens} for {batch_size} hypotheses"
+            f"Batch {batch_label} token budget: {synthesis_max_tokens} for {batch_size} hypotheses"
         )
 
-        # track tool calls
         tool_call_counts: Dict[str, int] = {}
 
-        async def validation_tracked_executor(tool_call):
-            """Track and execute tool calls for validation phase."""
-            tool_name = tool_call.function.name
-            tool_call_counts[tool_name] = tool_call_counts.get(tool_name, 0) + 1
-            call_num = tool_call_counts[tool_name]
-            logger.info(f"Validation batch {batch_num}: {tool_name} call #{call_num}")
+        async def tracked_executor(tool_call):
+            name = tool_call.function.name
+            tool_call_counts[name] = tool_call_counts.get(name, 0) + 1
+            logger.info(f"Validation batch {batch_label}: {name} call #{tool_call_counts[name]}")
             return await provider.execute_tool_call(tool_call)
 
-        try:
-            # use agentic loop with tool access
-            final_response, messages = await call_llm_with_tools(
-                prompt=synthesis_prompt,
-                model_name=state["model_name"],
-                tools=openai_tools,
-                tool_executor=validation_tracked_executor,
-                max_tokens=synthesis_max_tokens,
-                temperature=HIGH_TEMPERATURE,
-                max_iterations=max_iterations,
+        final_response, _messages = await call_llm_with_tools(
+            prompt=synthesis_prompt,
+            model_name=state["model_name"],
+            tools=openai_tools,
+            tool_executor=tracked_executor,
+            max_tokens=synthesis_max_tokens,
+            temperature=HIGH_TEMPERATURE,
+            max_iterations=max_iterations,
+        )
+
+        total_calls = sum(tool_call_counts.values())
+        if total_calls > 0:
+            calls_summary = ", ".join(f"{n}={c}" for n, c in tool_call_counts.items())
+            logger.info(f"Batch {batch_label}: {total_calls} tool calls ({calls_summary})")
+
+        response_text = _extract_response_json(final_response)
+        response_data, was_repaired = attempt_json_repair(response_text, allow_major_repairs=True)
+
+        if response_data is None:
+            logger.error(f"Failed to parse batch {batch_label} JSON response")
+            logger.error(f"Response: {final_response[:500]}...")
+            raise ValueError(f"Validation synthesis returned invalid JSON (batch {batch_label})")
+
+        if was_repaired:
+            logger.warning(f"Batch {batch_label} JSON required repairs")
+
+        result = response_data.get("hypotheses", [])
+        logger.debug(f"Batch {batch_label} synthesis returned {len(result)} hypotheses")
+        return result
+
+    # -------------------------------------------------------------------------
+    # execute all batches in parallel; capture failures without aborting
+    # -------------------------------------------------------------------------
+
+    raw_results = await asyncio.gather(
+        *[_call_synthesis(batch, str(i + 1), None) for i, batch in enumerate(batches)],
+        return_exceptions=True,
+    )
+
+    all_validated_hypotheses: List[Dict[str, Any]] = []
+    failed_batches: List[tuple] = []
+
+    for i, result in enumerate(raw_results):
+        if isinstance(result, Exception):
+            logger.warning(
+                f"Batch {i + 1} failed ({result}); will retry hypotheses individually"
             )
+            failed_batches.append((i, batches[i]))
+        else:
+            all_validated_hypotheses.extend(result)  # type: ignore[arg-type]
 
-            total_calls = sum(tool_call_counts.values())
-            if total_calls > 0:
-                calls_summary = ", ".join(f"{n}={c}" for n, c in tool_call_counts.items())
-                logger.info(f"Batch {batch_num}: {total_calls} tool calls ({calls_summary})")
+    logger.info(
+        f"{len(batches) - len(failed_batches)}/{len(batches)} batches succeeded, "
+        f"{len(failed_batches)} need individual retry"
+    )
 
-            # parse JSON response
-            response_text = final_response.strip()
+    # -------------------------------------------------------------------------
+    # retry failed batches one hypothesis at a time, accumulating context
+    # -------------------------------------------------------------------------
 
-            # handle markdown code blocks
-            response_lower = response_text.lower()
-            if "```json" in response_lower:
-                start_idx = response_lower.find("```json")
-                json_start = start_idx + 7
-                json_end = response_text.find("```", json_start)
-                if json_end == -1:
-                    response_text = response_text[json_start:].strip()
-                else:
-                    response_text = response_text[json_start:json_end].strip()
-            elif "```" in response_text:
-                json_start = response_text.find("```") + 3
-                json_end = response_text.find("```", json_start)
-                if json_end == -1:
-                    response_text = response_text[json_start:].strip()
-                else:
-                    response_text = response_text[json_start:json_end].strip()
+    if failed_batches:
+        # seed context with texts from successful batches
+        accumulated_texts: List[str] = [
+            h.get("hypothesis", "") for h in all_validated_hypotheses if h.get("hypothesis")
+        ]
 
-            response_text = response_text.strip().strip("\n").strip()
-
-            # use JSON repair for robust parsing
-            response_data, was_repaired = attempt_json_repair(response_text, allow_major_repairs=True)
-
-            if response_data is None:
-                logger.error(f"Failed to parse batch {batch_num} JSON response")
-                logger.error(f"Response: {final_response[:500]}...")
-                raise ValueError("Validation synthesis returned invalid JSON")
-
-            if was_repaired:
-                logger.warning(f"Batch {batch_num} JSON required repairs")
-
-            logger.debug(
-                f"Batch {batch_num} synthesis returned {len(response_data.get('hypotheses', []))} hypotheses"
-            )
-            return response_data.get("hypotheses", [])
-
-        except Exception as e:
-            logger.error(f"Validation synthesis failed for batch {batch_num}: {e}")
-            raise
-
-    # process all batches in parallel
-    batch_tasks = [
-        process_synthesis_batch_with_tools(batch, i + 1)
-        for i, batch in enumerate(batches)
-    ]
-
-    batch_results = await asyncio.gather(*batch_tasks)
-
-    # combine all validated hypotheses from batches
-    all_validated_hypotheses = []
-    for batch_hypotheses in batch_results:
-        all_validated_hypotheses.extend(batch_hypotheses)
+        for batch_idx, failed_batch in failed_batches:
+            for hyp_idx, hyp_data in enumerate(failed_batch):
+                label = f"{batch_idx + 1}_retry_{hyp_idx + 1}"
+                context = accumulated_texts if accumulated_texts else None
+                try:
+                    single_result = await _call_synthesis([hyp_data], label, context)
+                    all_validated_hypotheses.extend(single_result)
+                    # accumulate for subsequent retries within this loop
+                    for h in single_result:
+                        text = h.get("hypothesis", "")
+                        if text:
+                            accumulated_texts.append(text)
+                except Exception as e:
+                    logger.error(
+                        f"Individual retry failed for batch {batch_idx + 1}, "
+                        f"hypothesis {hyp_idx + 1}: {e}"
+                    )
 
     logger.info(
         f"Combined {len(all_validated_hypotheses)} validated hypotheses from {len(batches)} batches"

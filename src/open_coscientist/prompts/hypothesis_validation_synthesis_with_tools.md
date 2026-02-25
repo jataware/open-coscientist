@@ -37,7 +37,7 @@ You can use tools to search for additional papers or query PDF content when maki
 **Tool Budget:** You have up to {{max_iterations}} tool calls available. Use them judiciously.
 
 {{tool_instructions}}
-
+{{already_validated_context}}
 ## Your Task
 
 For each draft hypothesis, decide whether to **approve**, **refine**, or **pivot** based on the novelty analyses provided. Use tools when needed to verify your decisions.

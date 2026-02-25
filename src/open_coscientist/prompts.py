@@ -927,6 +927,27 @@ def get_hypothesis_validation_synthesis_prompt(
     return load_prompt("hypothesis_validation_synthesis", variables)
 
 
+def _build_already_validated_context(already_validated_texts: Optional[List[str]]) -> str:
+    """Build diversity constraint block for retry path.
+
+    Injected only when retrying failed batches individually, so the model
+    knows which hypothesis territory is already claimed and can pivot away.
+    """
+    if not already_validated_texts:
+        return ""
+    lines = "\n".join(f"- {t}" for t in already_validated_texts)
+    return f"""
+## Hypotheses Already Validated (Diversity Constraint)
+
+The following hypotheses have already been validated and will be included in the final output.
+Your output **must explore different mechanistic territory** from each of these.
+If your draft overlaps significantly with any entry below, treat it as saturated and pivot:
+
+{lines}
+
+"""
+
+
 def get_validation_synthesis_prompt_with_tools(
     research_goal: str,
     hypotheses_with_analyses: list[Dict[str, Any]],
@@ -935,6 +956,7 @@ def get_validation_synthesis_prompt_with_tools(
     max_iterations: int = 8,
     tool_registry: Optional[Any] = None,
     reference_list: str = "",
+    already_validated_texts: Optional[List[str]] = None,
 ) -> Tuple[str, Optional[Dict[str, Any]]]:
     """
     Get prompt for validation synthesis with tool access.
@@ -949,6 +971,8 @@ def get_validation_synthesis_prompt_with_tools(
         articles_with_reasoning: Literature review synthesis
         max_iterations: Max tool iterations for the agent
         tool_registry: Optional ToolRegistry for dynamic tool instructions
+        already_validated_texts: Hypothesis texts already validated (retry path only).
+            Injected as a diversity constraint so the model avoids duplicate territory.
     """
     # get tool IDs for validation workflow
     tool_ids = []
@@ -1001,6 +1025,7 @@ def get_validation_synthesis_prompt_with_tools(
         "citation_reference_section": _build_citation_reference_section(reference_list or ""),
         "max_iterations": max_iterations,
         "tool_instructions": tool_instructions,
+        "already_validated_context": _build_already_validated_context(already_validated_texts),
     }
 
     # inject domain-specific prompt customizations

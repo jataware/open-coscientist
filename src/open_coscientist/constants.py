@@ -149,3 +149,7 @@ def get_validate_max_iterations(hypotheses_count: int) -> int:
 
 GENERATE_LIT_TOOL_MAX_PAPERS = 3
 """max papers to examine in draft/validate phase.."""
+
+VALIDATION_SYNTHESIS_BATCH_SIZE = 3
+"""hypotheses per validation synthesis call. smaller = less output per call, more reliable for
+models with tight output token budgets (e.g. gemini-3-pro). trade-off: more parallel api calls."""
